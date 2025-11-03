@@ -1,0 +1,17 @@
+{
+  "domain": "smartwater",
+  "name": "Smart Water",
+  "codeowners": [ "@ankohanse" ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/ankohanse/hass-smart-water",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/ankohanse/hass-smart-water/issues",
+  "loggers": ["custom_components.smartwater"],
+  "requirements": [
+    "smartwater==0.0.7",
+    "jsonpath-ng<2.0.0"
+  ],
+  "version": "2025.11.1"
+}
