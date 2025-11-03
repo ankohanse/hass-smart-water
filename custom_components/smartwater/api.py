@@ -228,16 +228,13 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
 
                 match fetch_method:
                     case SmartWaterFetchMethod.WEB:
-                        # Check access token, if needed do a logout, wait and re-login
-                        await self._async_login()
-
                         # Once a day, attempt to refresh
                         # - profile
                         await self._async_detect_profile(expiry=24*60*60, ignore=ignore_periodic_refresh)
 
-                        # Always fetch gateway and device statuses
-                        await self._async_detect_profile_gateways(profile_id, expiry=0, ignore=False)
-                        await self._async_detect_profile_devices(profile_id, expiry=0, ignore=False)
+                        # Once every 5 minutes, attempt to refresh
+                        # - devices (gateways, tank sensors and pump controllers)
+                        await self._async_detect_profile_devices(profile_id, expiry=5*60, ignore=False)
 
                         # Update the persisted cache
                         await self._async_write_cache(profile_id)
@@ -296,7 +293,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         await super().logout()
 
 
-    async def _async_detect_profile(self, profile_id: str, expiry:int=0, ignore:bool=False):
+    async def _async_detect_profile(self, expiry:int=0, ignore:bool=False):
         """
         Attempt to refresh the profile
         """
@@ -323,99 +320,46 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 raise e from None
 
 
-    async def _async_detect_profile_gateways(self, profile_id: str, expiry:int=0, ignore:bool=False):
+    async def _async_detect_profile_devices(self, profile_id:str, expiry:int=0, ignore:bool=False):
         """
-        Attempt to refresh the list of gateways
+        Fetch all gateways and all devices in a profile
         """
-        fetch_context = f"gateways for {profile_id}"
+        fetch_context = f"devices for {profile_id}"
 
         if (utcnow() - self._fetch_ts.get(fetch_context, utcmin())).total_seconds() < expiry:
             return  # Not yet expired
 
         try:
+            all_devices = {}
+
+            # Fetch all profile gateways and wrap into SmartWaterData objects
             gateways_data = await super().fetch_gateways()
 
             context = {
                 'profile_id': profile_id,
-            }
-            gateways = {}
-            for id,data in gateways_data.items():
-                gateways[id] = SmartWaterData(family=SmartWaterDataFamily.GATEWAY, id=id, data=data, context=context)
-
+            }   
             gateways = { id:SmartWaterData(family=SmartWaterDataFamily.GATEWAY, id=id, data=data, context=context) for id,data in gateways_data.items() }
+            all_devices.update(gateways)
 
-            # Delete any gateways that no longer exist
-            new_gw_ids = set(gateways.keys())
-            old_gw_ids = set([ id for id,d in self.devices.items() if d.family==SmartWaterDataFamily.GATEWAY ])
-            del_gw_ids = old_gw_ids - new_gw_ids
+            # Fetch all devices for all gateways and wrap into SmartWaterData objects
+            for gateway_id in gateways.keys():
+                gw_devices_data = await super().fetch_devices(gateway_id)
 
-            for id in del_gw_ids:
-                self.devices.pop(id, None)
+                context = {
+                    'profile_id': profile_id,
+                    'gateway_id': gateway_id,
+                }
+                gw_devices = { id:SmartWaterData(SmartWaterDataFamily.DEVICE, id, data, context) for id,data in gw_devices_data.items() }
+                all_devices.update(gw_devices)
 
-            # Also delete any devices that are associated with a gateway that no longer exists                
-            del_device_ids = [ id for id,d in self.devices.items() if d.family==SmartWaterDataFamily.DEVICE and d.get(SmartWaterDataKey.GATEWAY_ID) not in new_gw_ids ]
-
-            for id in del_device_ids:
-                self.devices.pop(id, None)
-            
-            # Update our device list
-            self.devices.update(gateways)
+            # Save to our internal dict
+            self.devices = all_devices
             self._fetch_ts[fetch_context] = utcnow()
 
         except Exception as e:
             # Ignore issues if this is just a periodic update
             if ignore:
                 _LOGGER.info(f"{e}")
-            else:
-                raise e from None
-
-
-    async def _async_detect_profile_devices(self, profile_id:str, expiry:int=0, ignore:bool=False):
-        """
-        Fetch devices for all gateways in a profile
-        """
-        gateway_ids = set([ id for id,d in self.devices.items() if d.family==SmartWaterDataFamily.GATEWAY ])
-
-        for gateway_id in gateway_ids:
-            await self._async_detect_gateway_devices(gateway_id, expiry, ignore)
-
-
-    async def _async_detect_gateway_devices(self, gateway_id:str, expiry:int=0, ignore:bool=False):
-        """
-        Fetch devices for a specific gateway
-        """
-        fetch_context = f"devices for {gateway_id}"
-
-        if (utcnow() - self._fetch_ts.get(fetch_context, utcmin())).total_seconds() < expiry:
-            return  # Not yet expired
-
-        try:
-            gw_devices_data = await super().fetch_devices(gateway_id)
-
-            context = {
-                'gateway_id': gateway_id,
-            }
-            gw_devices = { id:SmartWaterData(SmartWaterDataFamily.DEVICE, id, data, context) for id,data in gw_devices_data.items() }
-
-            # Delete any devices that are no longer associated with this gateway
-            new_device_ids = set(gw_devices.keys())
-            old_device_ids = set([ id for id,d in self.devices.items() if d.family==SmartWaterDataFamily.DEVICE and d.get(SmartWaterDataKey.GATEWAY_ID)==gateway_id ])
-            del_device_ids = old_device_ids - new_device_ids
-
-            for id in del_device_ids:
-                self.devices.pop(id, None)
-
-            # Now update our internal device map
-            self.devices.update(gw_devices)
-            self._fetch_ts[fetch_context] = utcnow()
-
-            # also remove 
-
-        except Exception as e:
-            # Never ignore issues
-            if ignore:
-                _LOGGER.info(f"{e}")
-                device_map = {}
             else:
                 raise e from None
 

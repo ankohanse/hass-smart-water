@@ -195,15 +195,16 @@ class SmartWaterData:
         # Lookup the value for this datapoint
         try:
             match = jsonpath_parse(path).find(self._data)
-            if len(match) == 1:
-                return match[0].value
-            else:
-                _LOGGER.debug(f"Error while resolving {path}: {len(match)} items found")
-                return None
+
+            match len(match):
+                case 1: return match[0].value
+                case 0: return None
+                case _: _LOGGER.debug(f"Error while resolving {path}: {len(match)} items found")
         
         except Exception as ex:
             _LOGGER.debug(f"Error while resolving {path}: {str(ex)}")
-            return None
+
+        return None
         
 
     def to_dict(self):

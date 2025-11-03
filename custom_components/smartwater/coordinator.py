@@ -23,9 +23,10 @@ from .const import (
     DOMAIN,
     NAME,
     COORDINATOR,
+    MANUFACTURER,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
-    MANUFACTURER,
+    DEFAULT_POLLING_INTERVAL,
     COORDINATOR_RELOAD_DELAY,
     COORDINATOR_RELOAD_DELAY_MAX,
     utcnow,
@@ -143,6 +144,9 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
             _LOGGER,
             # Name of the data. For logging purposes.
             name=NAME,
+            # Polling interval. Will only be polled if there are subscribers.
+            update_interval=timedelta(seconds=DEFAULT_POLLING_INTERVAL),
+            update_method=self._async_update_data,
         )
 
         self._config_entry_id: str = config_entry_id
@@ -341,8 +345,6 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         """
 
         # Get list of device serials in HA device registry and as retrieved from Api
-        api_device_ids: set[str]  = set([ k for k,v in self._api.devices.items() ])
-
         api_ids: set[str] = set(self._api.devices.keys())
         old_ids: set[str] = set(self._valid_device_ids.keys())
         new_ids: set[str] = api_ids - old_ids

@@ -30,6 +30,7 @@ COORDINATOR = "Coordinator"
 
 DEFAULT_USERNAME = ""
 DEFAULT_PASSWORD = ""
+DEFAULT_POLLING_INTERVAL = 5 * 60   # 5 minutes in seconds
 
 CONF_PROFILE_ID = "profile_id"
 CONF_PROFILE_NAME = "profile_name"

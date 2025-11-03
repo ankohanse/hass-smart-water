@@ -146,7 +146,6 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
                 attr_precision = None
                 attr_val = self._datapoint.opt.get(str(value), value) if value is not None and isinstance(self._datapoint.opt, dict) else None
                 attr_unit = None
-                _LOGGER.debug(f"Sensor, lookup enum value={value} ({type(value)}), opt={self._datapoint.opt}, resulting val={attr_val}")
 
         # update value if it has changed
         changed = super()._update_value(attr_val, force)
