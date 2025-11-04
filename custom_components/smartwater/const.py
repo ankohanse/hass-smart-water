@@ -38,9 +38,11 @@ DIAGNOSTICS_REDACT = { CONF_PASSWORD, 'client_secret' }
 
 MANUFACTURER = "Smart Water Technologies"
 
+# Extra attributes displayed in entity attributes
+ATTR_DATA_VALUE = "smartwater_value"
+
 # Extra attributes that are restored from the previous HA run
-ATTR_STORED_CODE = "code"
-ATTR_STORED_VALUE = "value"
+ATTR_STORED_DATA_VALUE = "value"
 
 BINARY_SENSOR_VALUES_ON = [True, 1, '1']
 BINARY_SENSOR_VALUES_OFF = [False, 0, '0']

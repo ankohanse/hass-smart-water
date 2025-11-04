@@ -1,7 +1,8 @@
-from dataclasses import dataclass
 import logging
-
 import re
+
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Self
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
@@ -26,8 +27,8 @@ from homeassistant.const import UnitOfTime
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 
 from .const import (
-    ATTR_STORED_CODE,
-    ATTR_STORED_VALUE,
+    ATTR_DATA_VALUE,
+    ATTR_STORED_DATA_VALUE,
     utcnow,
 )
 from .coordinator import (
@@ -45,19 +46,21 @@ _LOGGER = logging.getLogger(__name__)
 class SmartWaterEntityExtraData(ExtraStoredData):
     """Object to hold extra stored data."""
 
-    value: str = None
-
+    data_value: Any = None
+    
     def as_dict(self) -> dict[str, Any]:
         """Return a dict representation of the sensor data."""
+
         return {
-            ATTR_STORED_VALUE: self.value,
+            ATTR_STORED_DATA_VALUE: self.data_value
         }
 
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
         """Initialize a stored sensor state from a dict."""
+
         return cls(
-            value = restored.get(ATTR_STORED_VALUE),
+            data_value = restored.get(ATTR_STORED_DATA_VALUE)
         )
 
 
@@ -84,7 +87,7 @@ class SmartWaterEntity(RestoreEntity):
         self._name = self._datapoint.name
 
         # Attributes to be restored in the next HA run
-        self._value: str = None
+        self._data_value: Any = None     # Original data value as returned from Api
 
         # Derived properties
         self._unit = self.get_unit()        # don't apply directly to _attr_unit, some entities don't have it
@@ -113,12 +116,25 @@ class SmartWaterEntity(RestoreEntity):
     
 
     @property
+    def extra_state_attributes(self) -> dict[str, str | list[str]]:
+        """
+        Return the state attributes to display in entity attributes.
+        """
+        state_attr = {}
+
+        if self._data_value is not None:
+            state_attr[ATTR_DATA_VALUE] = self._data_value
+
+        return state_attr        
+    
+    @property
     def extra_restore_state_data(self) -> SmartWaterEntityExtraData | None:
         """
         Return entity specific state data to be restored on next HA run.
         """
+
         return SmartWaterEntityExtraData(
-            value = self._value,
+            data_value = self._data_value
         )
     
 
@@ -141,17 +157,14 @@ class SmartWaterEntity(RestoreEntity):
         last_extra = await self.async_get_last_extra_data()
         
         if last_state and last_extra:
-            # Set entity value from restored data
+            # Get entity value from restored data
             dict_extra = last_extra.as_dict()
+            data_value = dict_extra.get(ATTR_STORED_DATA_VALUE)
 
-            value = dict_extra.get(ATTR_STORED_VALUE),
-
-            #AJH
-            #_LOGGER.debug(f"Restore entity '{self.entity_id}' value to {last_state.state} ({value})")
-            #self._update_value(value, force=True)
+            self._update_value(data_value, force=True)
     
 
-    def _update_value(self, value, force:bool=False) -> bool:
+    def _update_value(self, data_value: Any, force:bool=False) -> bool:
         """
         Process any changes in value
         
@@ -159,8 +172,8 @@ class SmartWaterEntity(RestoreEntity):
         """
         changed = False
 
-        if self._value != value:
-            self._value = value
+        if self._data_value != data_value:
+            self._data_value = data_value
             changed = True
 
         return changed
@@ -202,7 +215,7 @@ class SmartWaterEntity(RestoreEntity):
         match self._datapoint.key:
             case 'battery_level':  return None  # Automatically assigned by HA with battery-low, battery-med or battery-high
             case 'water_level':    return 'mdi:water-percent'
-            case 'trend_level':    return { 'flat':'mdi:waves', 'up':'mdi:waves-arrow-up', 'down': 'mdi:waves-arrow-down' }.get(self._value, None)
+            case 'trend_level':    return { 'flat':'mdi:waves', 'up':'mdi:waves-arrow-up', 'down': 'mdi:waves-arrow-down' }.get(self._data_value, None)
 
         match self._datapoint.unit:
             case 'd':       return 'mdi:timer'

@@ -90,8 +90,8 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         )
         
         # Create all value related attributes
-        value = device.get_value(key)
-        self._update_value(value, force=True)
+        data_value = device.get_value(key)
+        self._update_value(data_value, force=True)
     
     
     @callback
@@ -108,13 +108,13 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
             return        
 
         # Update value related attributes
-        value = device.get_value(self._datapoint.key)
+        data_value = device.get_value(self._datapoint.key)
 
-        if self._update_value(value):
+        if self._update_value(data_value):
             self.async_write_ha_state()
     
     
-    def _update_value(self, value: Any, force:bool=False) -> bool:
+    def _update_value(self, data_value: Any, force:bool=False) -> bool:
         """
         Set entity value, unit and icon
         """
@@ -123,32 +123,32 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
             case 'f1' | 'f2' | 'f3' | 'f4':
                 weight = 1
                 attr_precision = int(self._datapoint.fmt.lstrip('f'))
-                attr_val = round(float(value) * weight, attr_precision) if value is not None and not math.isnan(value) else None
+                attr_val = round(float(data_value) * weight, attr_precision) if data_value is not None and isinstance(data_value, (float,int)) and not math.isnan(data_value) else None
                 attr_unit = self._unit
 
             case 'i':
                 weight = 1
                 attr_precision = 0
-                attr_val = int(value) * weight if value is not None and not math.isnan(value) else None
+                attr_val = int(data_value) * weight if data_value is not None and isinstance(data_value, int) and not math.isnan(data_value) else None
                 attr_unit = self._unit
 
             case 't':
                 attr_precision = None
-                attr_val = datetime.fromtimestamp(float(value), timezone.utc) if value is not None and not math.isnan(value) else None
+                attr_val = datetime.fromtimestamp(float(data_value), timezone.utc) if data_value is not None and isinstance(data_value, (float,int)) and not math.isnan(data_value) else None
                 attr_unit = None
 
             case 's':
                 attr_precision = None
-                attr_val = str(value) if value is not None else None
+                attr_val = str(data_value) if data_value is not None else None
                 attr_unit = None
 
             case 'e' | _:
                 attr_precision = None
-                attr_val = self._datapoint.opt.get(str(value), value) if value is not None and isinstance(self._datapoint.opt, dict) else None
+                attr_val = self._datapoint.opt.get(str(data_value), data_value) if data_value is not None and isinstance(self._datapoint.opt, dict) else None
                 attr_unit = None
 
         # update value if it has changed
-        changed = super()._update_value(attr_val, force)
+        changed = super()._update_value(data_value, force)
 
         if force or self._attr_native_value != attr_val:
 

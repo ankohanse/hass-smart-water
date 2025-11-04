@@ -103,8 +103,8 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         )
 
         # Create all value related attributes
-        value = device.get_value(key)
-        self._update_value(value, force=True)
+        data_value = device.get_value(key)
+        self._update_value(data_value, force=True)
     
     
     @callback
@@ -121,26 +121,26 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
             return        
 
         # Update value related attributes
-        value = device.get_value(self._datapoint.key)
+        data_value = device.get_value(self._datapoint.key)
 
-        if self._update_value(value):
+        if self._update_value(data_value):
             self.async_write_ha_state()
     
     
-    def _update_value(self, value: Any, force:bool=False) -> bool:
+    def _update_value(self, data_value: Any, force:bool=False) -> bool:
         """
         Set entity value, unit and icon
         """
         
-        if value in BINARY_SENSOR_VALUES_ON:
+        if data_value in BINARY_SENSOR_VALUES_ON:
             is_on = True
-        elif value in BINARY_SENSOR_VALUES_OFF:
+        elif data_value in BINARY_SENSOR_VALUES_OFF:
             is_on = False
         else:
             is_on = None
 
         # update value if it has changed
-        changed = super()._update_value(value, force)
+        changed = super()._update_value(data_value, force)
 
         if force or self._attr_is_on != is_on:
             
