@@ -26,7 +26,7 @@ from .const import (
     MANUFACTURER,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
-    DEFAULT_POLLING_INTERVAL,
+    COORDINATOR_POLLING_INTERVAL,
     COORDINATOR_RELOAD_DELAY,
     COORDINATOR_RELOAD_DELAY_MAX,
     utcnow,
@@ -145,7 +145,7 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
             # Name of the data. For logging purposes.
             name=NAME,
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=timedelta(seconds=DEFAULT_POLLING_INTERVAL),
+            update_interval=timedelta(seconds=COORDINATOR_POLLING_INTERVAL),
             update_method=self._async_update_data,
         )
 

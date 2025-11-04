@@ -173,7 +173,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
 
     async def async_detect_for_config(self):
         ex_first = None
-        ts_start = utcnow()
+        dt_start = utcnow()
 
         fetch_order = SmartWaterFetchOrder.CONFIG
         for retry,fetch_method in enumerate(fetch_order):
@@ -195,7 +195,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 
                 # Keep track of how many retries were needed and duration
                 # Keep track of how often the successfull fetch is from Web or is from Cache
-                self._update_statistics(retries = retry, duration = utcnow()-ts_start, fetch=fetch_method)
+                self._update_statistics(retries = retry, duration = utcnow()-dt_start, fetch=fetch_method)
                 return True;
             
             except Exception as ex:
@@ -206,7 +206,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 await self._async_logout()
             
         # Keep track of how many retries were needed and duration
-        self._update_statistics(retries = retry, duration = utcnow()-ts_start)
+        self._update_statistics(retries = retry, duration = utcnow()-dt_start)
 
         if ex_first:
             _LOGGER.warning(str(ex_first))
@@ -217,7 +217,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         
     async def async_detect_data(self, profile_id: str, fetch_order: SmartWaterFetchOrder):
         ex_first = None
-        ts_start = utcnow()
+        dt_start = utcnow()
 
         for retry,fetch_method in enumerate(fetch_order):
             try:
@@ -232,7 +232,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                         # - profile
                         await self._async_detect_profile(expiry=24*60*60, ignore=ignore_periodic_refresh)
 
-                        # Once every 5 minutes, attempt to refresh
+                        # Always attempt to refresh
                         # - devices (gateways, tank sensors and pump controllers)
                         await self._async_detect_profile_devices(profile_id, expiry=5*60, ignore=False)
 
@@ -244,7 +244,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
 
                 # Keep track of how many retries were needed and duration
                 # Keep track of how often the successfull fetch is from Web or is from Cache
-                self._update_statistics(retries = retry, duration = utcnow()-ts_start, fetch = fetch_method)
+                self._update_statistics(retries = retry, duration = utcnow()-dt_start, fetch = fetch_method)
 
                 return True
             
@@ -262,7 +262,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 _LOGGER.warning(ex_first)
         
         # Keep track of how many retries were needed and duration
-        self._update_statistics(retries = retry, duration = utcnow()-ts_start)
+        self._update_statistics(retries = retry, duration = utcnow()-dt_start)
         return False
     
 

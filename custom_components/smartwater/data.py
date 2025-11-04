@@ -44,14 +44,14 @@ DATAPOINTS = [
     DP(fam="gw",     key="can_edit",           name="Can Edit",             pf=None,  flag="",       path="#canEdit",                fmt="b",  unit="",     opt={}),
     DP(fam="gw",     key="enabled",            name="Enabled",              pf=None,  flag="",       path="#enabled",                fmt="b",  unit="",     opt={}),
     DP(fam="gw",     key="status",             name="Status",               pf="sen", flag="e,none", path="status",                  fmt="s",  unit="",     opt={}),
-    DP(fam="gw",     key="signal",             name="Signal",               pf="sen", flag="e,diag", path="signalStrength",          fmt="i",  unit="dB",   opt={}),
-    DP(fam="gw",     key="alert_any",          name="Any Alerts",           pf="bin", flag="e,diag", path="anyAlerts",               fmt="b",  unit="",     opt={}),
+    DP(fam="gw",     key="alert_any",          name="Any Alerts",           pf="bin", flag="e,none", path="anyAlerts",               fmt="b",  unit="",     opt={}),
+    DP(fam="gw",     key="signal",             name="Signal",               pf="sen", flag="e,none", path="signalStrength",          fmt="i",  unit="dB",   opt={}),
 
     # For Gateway (default disabled entity)
     DP(fam="gw",     key="address",            name="Location Address",     pf="sen", flag="d,diag", path="location.address",        fmt="s",  unit="",     opt={}),
     DP(fam="gw",     key="postcode",           name="Location Postcode",    pf="sen", flag="d,diag", path="location.postcode",       fmt="s",  unit="",     opt={}),
     DP(fam="gw",     key="suburb",             name="Location Suburb",      pf="sen", flag="d,diag", path="location.suburb",         fmt="s",  unit="",     opt={}),
-    DP(fam="gw",     key="city",               name="Location City",        pf="sen", flag="ed,diag", path="location.city",           fmt="s",  unit="",     opt={}),
+    DP(fam="gw",     key="city",               name="Location City",        pf="sen", flag="d,diag", path="location.city",           fmt="s",  unit="",     opt={}),
     DP(fam="gw",     key="country",            name="Location Country",     pf="sen", flag="d,diag", path="location.country",        fmt="s",  unit="",     opt={}),
     DP(fam="gw",     key="longitude",          name="Location Longitude",   pf="sen", flag="d,diag", path="location.lat",            fmt="f4", unit="",     opt={}),
     DP(fam="gw",     key="latitude",           name="Location Latitude",    pf="sen", flag="d,diag", path="location.lng",            fmt="f4", unit="",     opt={}),
@@ -64,7 +64,7 @@ DATAPOINTS = [
     DP(fam="d",      key="version",            name="Version",              pf=None,  flag="",       path="version",                 fmt="s",  unit="",     opt={}),
     DP(fam="d",      key="gateway_id",         name="Gateway Id",           pf=None,  flag="",       path="gatewayId",               fmt="s",  unit="",     opt={}),
     DP(fam="d",      key="status",             name="Status",               pf="sen", flag="e,none", path="status",                  fmt="s",  unit="",     opt={}),
-    DP(fam="d",      key="alert_any",          name="Any Alerts",           pf="bin", flag="e,diag", path="anyAlerts",               fmt="b",  unit="",     opt={}),
+    DP(fam="d",      key="alert_any",          name="Any Alerts",           pf="bin", flag="e,None", path="anyAlerts",               fmt="b",  unit="",     opt={}),
 
     # For Device.Tank
     DP(fam="d.tank", key="water_level",        name="Water Level",          pf="sen", flag="e,none", path="waterLevel",              fmt="i",  unit="%",    opt={}),
@@ -97,7 +97,7 @@ DATAPOINTS = [
     DP(fam="d.tank", key="replace_filter_at",  name="Replace Filter At",    pf="sen", flag="d,diag", path="settings.replaceFilterAt",fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="clean_tank_at",      name="Clean Tank At",        pf="sen", flag="d,diag", path="settings.cleanTankAt",    fmt="t",  unit="",     opt={}),
 
-    # For Device.Tank (not exposed, seem to have internal/unrelevant values)
+    # For Device.Tank (not exposed, seem to have internal/unrelevant/never-changing values)
     DP(fam="d.tank", key="station_rssi",       name="Station RSSI",         pf=None,  flag="d,diag", path="stationRSSI",             fmt="i",  unit="dBm",  opt={}),
     DP(fam="d.tank", key="device_rssi",        name="Device RSSI",          pf=None,  flag="d,diag", path="deviceRSSI",              fmt="i",  unit="dBm",  opt={}),
     DP(fam="d.tank", key="min_level",          name="Min Level",            pf=None,  flag="d,diag", path="minLevel",                fmt="i",  unit="",     opt={}),
