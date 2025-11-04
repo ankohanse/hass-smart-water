@@ -230,10 +230,6 @@ class SmartWaterEntity(RestoreEntity):
     
     def get_number_device_class(self):
         """Convert from unit to NumberDeviceClass"""
-
-        match self._datapoint.key:
-            case 'battery_level':  return NumberDeviceClass.BATTERY
-
         match self._datapoint.unit:
             case '%':       return None 
             case 'd':       return None
@@ -268,11 +264,10 @@ class SmartWaterEntity(RestoreEntity):
     
     def get_binary_sensor_device_class(self):
         """Return one of the BinarySensorDeviceClass.xyz or None"""
-
-        if self._datapoint.key.startswith("alert_"):
-            return BinarySensorDeviceClass.PROBLEM
-        
-        return None
+        match self._datapoint.key:
+            case 'aux_power':                       return BinarySensorDeviceClass.POWER
+            case key if key.startswith("alert_"):   return BinarySensorDeviceClass.PROBLEM
+            case _:                                 return None
 
     
     def get_sensor_state_class(self):
