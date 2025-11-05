@@ -109,6 +109,13 @@ DATAPOINTS = [
     DP(fam="d.tank", key="fluid_density",      name="Fluid Density",        pf=None,  flag="d,diag", path="settings.fluidDensity",   fmt="f2", unit="",     opt={}),
 ]
 
+DATAPATHS_EXTRA = {
+    '#canEdit':     "$lookup(members, context.profile_id).canEdit",
+    '#enabled':     "$lookup(members, context.profile_id).enabled",
+    '#waterHeight': "(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight",
+}
+
+
 class SmartWaterDataFamily(StrEnum):
     PROFILE = "pr"
     GATEWAY = "gw"
@@ -144,10 +151,9 @@ class SmartWaterData:
         self.id = id
         self.name = id
 
-        self._data = data
-        self._context = context
+        self._data = data | ({ 'context': context } if context is not None else {})
 
-        # Get derived properties; this may overwrite earlier initial valeus
+        # Get derived properties; this may overwrite earlier initial values
         sub = self.get_value(SmartWaterDataKey.TYPE)
         name = self.get_value(SmartWaterDataKey.NAME)
 
@@ -179,26 +185,18 @@ class SmartWaterData:
 
         # get datapoint that defines properties for this key within this family
         datapoint = self.get_datapoint(key)
-        if datapoint is None:
-            return None
-        if datapoint.path is None:
+        if datapoint is None or datapoint.path is None:
             return None
 
-        # Apply pre-defined paths
-        profile_id = self._context.get("profile_id", "")
+        # Apply custom extra paths
+        path = DATAPATHS_EXTRA.get(datapoint.path, datapoint.path) if datapoint.path.startswith('#') else datapoint.path
 
-        match datapoint.path:
-            case '#canEdit':        path = f"members.{profile_id}.canEdit"
-            case '#enabled':        path = f"members.{profile_id}.enabled"
-            case '#waterHeight':    path = f"(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight"
-            case _:                 path = datapoint.path
-
-        # Lookup the value for this datapoint
         try:
+            # Lookup the value for this datapoint
             return Jsonata(path).evaluate(self._data)
         
         except Exception as ex:
-            _LOGGER.debug(f"Error while resolving {path}: {str(ex)}")
+            _LOGGER.debug(f"Could not resolve {path} for {key}: {str(ex)}")
 
         return None
         
@@ -210,7 +208,6 @@ class SmartWaterData:
             "id": self.id,
             "name": self.name,
             "data": self._data,
-            "context": self._context
         }
 
 
@@ -219,11 +216,10 @@ class SmartWaterData:
         family  = d.get("family", None)
         id      = d.get("id", None)
         data    = d.get("data", None)
-        context = d.get("context", {})
 
         if family is None or id is None or data is None:
             raise SmartWaterDataError()
         
-        return SmartWaterData(family, id, data, context)
+        return SmartWaterData(family, id, data, None)
 
         
