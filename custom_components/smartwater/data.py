@@ -84,15 +84,12 @@ DATAPOINTS = [
     # For Device.Tank (default disabled entity)
     DP(fam="d.tank", key="device_number",      name="Device Number",        pf="sen", flag="d,diag", path="deviceNumber",            fmt="s",  unit="",     opt={}),
     DP(fam="d.tank", key="aux_power",          name="Aux Power",            pf="bin", flag="d,diag", path="auxPower",                fmt="b",  unit="",     opt={}),
-    DP(fam="d.tank", key="days_number",        name="Days Number",          pf="sen", flag="d,diag", path="daysNumber",              fmt="i",  unit="d",    opt={}),
     DP(fam="d.tank", key="device_voltage",     name="Device Voltage",       pf="sen", flag="d,diag", path="devVoltage",              fmt="f2", unit="V",    opt={}),
     DP(fam="d.tank", key="sensor_status",      name="Sensor Status",        pf="sen", flag="d,diag", path="sensorStatus",            fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="last_report",        name="Last Report",          pf="sen", flag="d,diag", path="lastReport",              fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="last_modified",      name="Last Modified",        pf="sen", flag="d,diag", path="lastModified",            fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_not_receiving",name="Not Receiving Alert",  pf="bin", flag="d,diag", path="alerts.notReceiving",     fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_not_reporting",name="Not Reporting Alert",  pf="bin", flag="d,diag", path="alerts.notReporting",     fmt="b",  unit="",     opt={}),
-    DP(fam="d.tank", key="adc_value",          name="Adc Value",            pf="sen", flag="d,diag", path="adcValue",                fmt="i",  unit="",     opt={}),
-    DP(fam="d.tank", key="battery_adc",        name="Battery Adc",          pf="sen", flag="d,diag", path="batteryADC",              fmt="i",  unit="",     opt={}),
     DP(fam="d.tank", key="tank_height",        name="Tank Height",          pf="sen", flag="d,diag", path="settings.height",         fmt="f1", unit="m",    opt={}),
     DP(fam="d.tank", key="outflow_height",     name="Outflow Height",       pf="sen", flag="d,diag", path="settings.outflowHeight",  fmt="f1", unit="m",    opt={}),
     DP(fam="d.tank", key="replace_filter_at",  name="Replace Filter At",    pf="sen", flag="d,diag", path="settings.replaceFilterAt",fmt="t",  unit="",     opt={}),
@@ -103,10 +100,13 @@ DATAPOINTS = [
     DP(fam="d.tank", key="device_rssi",        name="Device RSSI",          pf=None,  flag="d,diag", path="deviceRSSI",              fmt="i",  unit="dBm",  opt={}),
     DP(fam="d.tank", key="min_level",          name="Min Level",            pf=None,  flag="d,diag", path="minLevel",                fmt="i",  unit="",     opt={}),
     DP(fam="d.tank", key="max_level",          name="Max Level",            pf=None,  flag="d,diag", path="maxLevel",                fmt="i",  unit="",     opt={}),
+    DP(fam="d.tank", key="days_number",        name="Days Number",          pf=None,  flag="d,diag", path="daysNumber",              fmt="i",  unit="d",    opt={}),
     DP(fam="d.tank", key="delta_percentage",   name="Delta Percentage",     pf=None,  flag="d,diag", path="deltaPercentage",         fmt="f2", unit="%",    opt={}),
     DP(fam="d.tank", key="clean_time",         name="Clean Time",           pf=None,  flag="d,diag", path="settings.cleanTime",      fmt="i",  unit="month",opt={}),
     DP(fam="d.tank", key="filter_time",        name="Filter Time",          pf=None,  flag="d,diag", path="settings.filterTime",     fmt="i",  unit="month",opt={}),
     DP(fam="d.tank", key="fluid_density",      name="Fluid Density",        pf=None,  flag="d,diag", path="settings.fluidDensity",   fmt="f2", unit="",     opt={}),
+    DP(fam="d.tank", key="adc_value",          name="Adc Value",            pf=None,  flag="d,diag", path="adcValue",                fmt="i",  unit="",     opt={}),
+    DP(fam="d.tank", key="battery_adc",        name="Battery Adc",          pf=None,  flag="d,diag", path="batteryADC",              fmt="i",  unit="",     opt={}),
 ]
 
 DATAPATHS_EXTRA = {
