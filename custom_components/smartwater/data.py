@@ -70,6 +70,7 @@ DATAPOINTS = [
     DP(fam="d.tank", key="water_level",        name="Water Level",          pf="sen", flag="e,none", path="waterLevel",              fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="trend_level",        name="Trend Level",          pf="sen", flag="e,none", path="trendLevel",              fmt="e",  unit="",     opt={ "0": "flat", "1": "up", "-1": "down" } ),
     DP(fam="d.tank", key="days_remaining",     name="Days remaining",       pf="sen", flag="e,none", path="daysRemaining",           fmt="i",  unit="d",    opt={}),
+    DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="e,none", path="avgDailyUse",             fmt="f2", unit="%",    opt={}),
     DP(fam="d.tank", key="battery_level",      name="Battery Level",        pf="sen", flag="e,diag", path="batteryLevel",            fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="alert_level_low",    name="Low Level Alert",      pf="bin", flag="e,diag", path="alerts.lowLevelAlert",    fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_level_high",   name="High Level Alert",     pf="bin", flag="e,diag", path="alerts.highLevelAlert",   fmt="b",  unit="",     opt={}),
@@ -85,7 +86,6 @@ DATAPOINTS = [
     DP(fam="d.tank", key="days_number",        name="Days Number",          pf="sen", flag="d,diag", path="daysNumber",              fmt="i",  unit="d",    opt={}),
     DP(fam="d.tank", key="device_voltage",     name="Device Voltage",       pf="sen", flag="d,diag", path="devVoltage",              fmt="f2", unit="V",    opt={}),
     DP(fam="d.tank", key="sensor_status",      name="Sensor Status",        pf="sen", flag="d,diag", path="sensorStatus",            fmt="i",  unit="%",    opt={}),
-    DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="d,diag", path="avgDailyUse",             fmt="f2", unit="%",    opt={}),
     DP(fam="d.tank", key="last_report",        name="Last Report",          pf="sen", flag="d,diag", path="lastReport",              fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="last_modified",      name="Last Modified",        pf="sen", flag="d,diag", path="lastModified",            fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_not_receiving",name="Not Receiving Alert",  pf="bin", flag="d,diag", path="alerts.notReceiving",     fmt="b",  unit="",     opt={}),
@@ -149,10 +149,9 @@ class SmartWaterData:
         # Get derived properties; this may overwrite earlier initial valeus
         sub = self.get_value(SmartWaterDataKey.TYPE)
         name = self.get_value(SmartWaterDataKey.NAME)
-        addr = self.get_value(SmartWaterDataKey.ADDRESS)
 
         self.family_sub = f"{family}.{sub}" if sub is not None else family
-        self.name = name or addr or id
+        self.name = name or sub or id
 
             
     def get_datapoints_for_platform(self, target_platform: str) -> list[SmartWaterDatapoint]:

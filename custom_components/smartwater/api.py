@@ -13,6 +13,7 @@ from homeassistant.helpers.httpx_client import create_async_httpx_client
 
 from smartwater import (
     AsyncSmartWaterApi,
+    SmartWaterApiFlag,
     SmartWaterConnectError,
     SmartWaterAuthError,
 ) 
@@ -91,10 +92,23 @@ class SmartWaterApiFactory:
             _LOGGER.debug(f"create temp Api")
 
             # Create a new SmartWaterApi instance
-            api = SmartWaterApiWrap(hass, username, password)
+            api = SmartWaterApiWrap(hass, username, password, is_temp=True)
     
         return api    
 
+
+    @staticmethod
+    async def async_close_temp(api: 'SmartWaterApiWrap'):
+        """
+        Close a previously created SmartWaterApi
+        """
+        try:
+            if api.is_temp and not api.closed:
+                _LOGGER.debug("close temp Api")
+                await api.close()
+
+        except Exception as ex:
+            _LOGGER.debug("Exception while closing temp Api: {ex}")
 
 
 class SmartWaterFetchMethod(Enum):
@@ -134,18 +148,23 @@ class SmartWaterFetchOrder():
 class SmartWaterApiWrap(AsyncSmartWaterApi):
     """Wrapper around smartwater AsyncSmartWaterApi class"""
 
-    def __init__(self, hass: HomeAssistant, username: str, password: str):
+    def __init__(self, hass: HomeAssistant, username: str, password: str, is_temp: bool = False):
         """Initialize the api"""
 
         self._hass = hass
         self._username = username
         self._password = password
+        self.is_temp = is_temp
 
         # Create a fresh http client
         client: httpx.AsyncClient = create_async_httpx_client(hass) 
         
         # Initialize the actual api
-        super().__init__(username, password, client=client, diagnostics_collect=True)
+        flags = {
+            SmartWaterApiFlag.REFRESH_HANDLER_START: True if not is_temp else False,
+            SmartWaterApiFlag.DIAGNOSTICS_COLLECT: True
+        } 
+        super().__init__(username, password, client=client, flags=flags)
 
         # Data properties
         self.profile: SmartWaterData = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id="", data={}, context={})
@@ -292,6 +311,8 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         """Logout"""
         await super().logout()
 
+        self._fetch_ts.clear()
+
 
     async def _async_detect_profile(self, expiry:int=0, ignore:bool=False):
         """
@@ -304,12 +325,11 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         
         try:
             data = await super().fetch_profile()
+
             context = {
                 'username': self._username,
-                'user_id': self._user_id,
             }
-
-            self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=super().profile_id, data=data, context={})
+            self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=super().profile_id, data=data, context=context)
             self._fetch_ts[fetch_context] = utcnow()
 
         except Exception as e:

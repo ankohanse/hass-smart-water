@@ -132,6 +132,16 @@ class SmartWaterCoordinatorFactory:
         return coordinator
     
 
+    @staticmethod
+    async def async_close_temp(coordinator: 'SmartWaterCoordinator'):
+        """
+        Close a previously created coordinator
+        """
+
+        _LOGGER.debug("close temp coordinator")
+        await SmartWaterApiFactory.async_close_temp(coordinator._api)
+    
+
 class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
     """My custom coordinator."""
 
@@ -298,7 +308,6 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
 
         await self._api.async_detect_for_config()  
         
-        #_LOGGER.debug(f"profile: {self._api.profile}")
         return self._api.profile
 
 

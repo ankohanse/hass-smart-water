@@ -56,8 +56,6 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._username = None
         self._password = None
         self._profile = None
-        self._profile_id = None
-        self._profile_name = None
         self._errors = {}
 
         # Assign the HA configured log level of this module to the aioSmartWater module
@@ -77,12 +75,10 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             # Call the SmartWaterApi with the detect_device method
             self._profile = await coordinator.async_config_flow_data()
-            self._profile_id = self._profile.get("id")
-            self._profile_name = self._profile.get("name")
             
-            if self._profile_id is not None and self._profile_name is not None:
+            if self._profile is not None:
                 _LOGGER.info("Successfully connected!")
-                _LOGGER.debug(f"profile: {self._profile}")
+                _LOGGER.debug(f"profile {self._profile.id}: {self._profile._data}")
                 self._errors = {}
                 return True
             else:
@@ -94,6 +90,9 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._errors[CONF_PASSWORD] = f"Authentication failed"
         except Exception as e:
             self._errors[CONF_PASSWORD] = f"Unknown error: {e}"
+
+        finally:
+            await SmartWaterCoordinatorFactory.async_close_temp(coordinator)
         
         return False
     
@@ -132,17 +131,17 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Configuration has finished"""
         
         # Use profile_id as unique_id for this config flow to avoid the same hub being setup twice
-        await self.async_set_unique_id(self._profile_id)
+        await self.async_set_unique_id(self._profile.id)
         self._abort_if_unique_id_configured()
     
         # Create the integration entry
         return self.async_create_entry(
-            title = self._profile_name, 
+            title = self._profile.name, 
             data = {
                 CONF_USERNAME: self._username,
                 CONF_PASSWORD: self._password,
-                CONF_PROFILE_ID: self._profile_id,
-                CONF_PROFILE_NAME: self._profile_name,
+                CONF_PROFILE_ID: self._profile.id,
+                CONF_PROFILE_NAME: self._profile.name,
             },
             options = {
             }

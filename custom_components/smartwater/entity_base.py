@@ -29,6 +29,7 @@ from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 from .const import (
     ATTR_DATA_VALUE,
     ATTR_STORED_DATA_VALUE,
+    DOMAIN,
     utcnow,
 )
 from .coordinator import (
@@ -79,8 +80,8 @@ class SmartWaterEntity(RestoreEntity):
         self._datapoint = device.get_datapoint(key)
 
         # The unique identifiers for this sensor within Home Assistant
-        self.object_id       = SmartWaterEntity.create_id(device.id, key)   # Device.id + params.key
-        self._attr_unique_id = SmartWaterEntity.create_id(device.name, key) # Device.name + params.key
+        self.object_id       = SmartWaterEntity.create_id(DOMAIN, device.id, key)   # Device.id + params.key
+        self._attr_unique_id = SmartWaterEntity.create_id(DOMAIN, device.name, key) # Device.name + params.key
 
         self._attr_has_entity_name = True
         self._attr_name = self._datapoint.name
