@@ -11,7 +11,7 @@
   "loggers": ["custom_components.smartwater"],
   "requirements": [
     "smartwater==0.0.13",
-    "jsonpath-ng<2.0.0"
+    "jsonata-python<1.0.0"
   ],
   "version": "2025.11.1"
 }

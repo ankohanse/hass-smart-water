@@ -2,7 +2,7 @@ import logging
 
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from jsonpath_ng import parse as jsonpath_parse
+from jsonata import Jsonata
 from typing import Any
 
 from homeassistant.const import Platform
@@ -68,6 +68,7 @@ DATAPOINTS = [
 
     # For Device.Tank
     DP(fam="d.tank", key="water_level",        name="Water Level",          pf="sen", flag="e,none", path="waterLevel",              fmt="i",  unit="%",    opt={}),
+    DP(fam="d.tank", key="water_height",       name="Water Height",         pf="sen", flag="e,none", path="#waterHeight",            fmt="f1", unit="m",    opt={}),
     DP(fam="d.tank", key="trend_level",        name="Trend Level",          pf="sen", flag="e,none", path="trendLevel",              fmt="e",  unit="",     opt={ "0": "flat", "1": "up", "-1": "down" } ),
     DP(fam="d.tank", key="days_remaining",     name="Days remaining",       pf="sen", flag="e,none", path="daysRemaining",           fmt="i",  unit="d",    opt={}),
     DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="e,none", path="avgDailyUse",             fmt="f2", unit="%",    opt={}),
@@ -92,7 +93,7 @@ DATAPOINTS = [
     DP(fam="d.tank", key="alert_not_reporting",name="Not Reporting Alert",  pf="bin", flag="d,diag", path="alerts.notReporting",     fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="adc_value",          name="Adc Value",            pf="sen", flag="d,diag", path="adcValue",                fmt="i",  unit="",     opt={}),
     DP(fam="d.tank", key="battery_adc",        name="Battery Adc",          pf="sen", flag="d,diag", path="batteryADC",              fmt="i",  unit="",     opt={}),
-    DP(fam="d.tank", key="height",             name="Height",               pf="sen", flag="d,diag", path="settings.height",         fmt="f1", unit="m",    opt={}),
+    DP(fam="d.tank", key="tank_height",        name="Tank Height",          pf="sen", flag="d,diag", path="settings.height",         fmt="f1", unit="m",    opt={}),
     DP(fam="d.tank", key="outflow_height",     name="Outflow Height",       pf="sen", flag="d,diag", path="settings.outflowHeight",  fmt="f1", unit="m",    opt={}),
     DP(fam="d.tank", key="replace_filter_at",  name="Replace Filter At",    pf="sen", flag="d,diag", path="settings.replaceFilterAt",fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="clean_tank_at",      name="Clean Tank At",        pf="sen", flag="d,diag", path="settings.cleanTankAt",    fmt="t",  unit="",     opt={}),
@@ -187,18 +188,14 @@ class SmartWaterData:
         profile_id = self._context.get("profile_id", "")
 
         match datapoint.path:
-            case '#canEdit': path = f"members.{profile_id}.canEdit"
-            case '#enabled': path = f"members.{profile_id}.enabled"
-            case _:          path = datapoint.path
+            case '#canEdit':        path = f"members.{profile_id}.canEdit"
+            case '#enabled':        path = f"members.{profile_id}.enabled"
+            case '#waterHeight':    path = f"(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight"
+            case _:                 path = datapoint.path
 
         # Lookup the value for this datapoint
         try:
-            match = jsonpath_parse(path).find(self._data)
-
-            match len(match):
-                case 1: return match[0].value
-                case 0: return None
-                case _: _LOGGER.debug(f"Error while resolving {path}: {len(match)} items found")
+            return Jsonata(path).evaluate(self._data)
         
         except Exception as ex:
             _LOGGER.debug(f"Error while resolving {path}: {str(ex)}")
