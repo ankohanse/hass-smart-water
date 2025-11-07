@@ -6,8 +6,9 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
 from homeassistant.core import async_get_hass
+from homeassistant.core import callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.device_registry import DeviceRegistry
@@ -239,27 +240,21 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         valid_ids: dict[str, tuple[str,str]] = {}
 
         for device in self._api.devices.values():
-
-            device_id = device.id
-            device_name = device.name
-            device_type = device.get_value(SmartWaterDataKey.TYPE)
-            device_serial = device.get_value(SmartWaterDataKey.SERIAL)  
-            device_version = device.get_value(SmartWaterDataKey.VERSION)
+            _LOGGER.debug(f"Create device {device.id} ({device.name}) for profile '{self._profile_name}'")
+ 
             device_gw_id = device.get_value(SmartWaterDataKey.GATEWAY_ID) # only for Tanks and Pumps
-
-            _LOGGER.debug(f"Create device {device_id} ({device_name}) for profile '{self._profile_name}'")
 
             dr.async_get_or_create(
                 config_entry_id = config_entry.entry_id,
-                identifiers = {(DOMAIN, device_id)},
-                name = device_name,
+                identifiers = {(DOMAIN, device.id)},
+                name = device.name,
                 manufacturer =  MANUFACTURER,
-                model = device_type,
-                serial_number = device_serial or device_id,
-                hw_version = device_version,
+                model = device.get_value(SmartWaterDataKey.TYPE),
+                serial_number = device.get_value(SmartWaterDataKey.SERIAL, device.id),
+                hw_version = device.get_value(SmartWaterDataKey.VERSION),
                 via_device = (DOMAIN, device_gw_id) if device_gw_id is not None else None,
             )
-            valid_ids[device_id] = (DOMAIN, device_id)
+            valid_ids[device.id] = (DOMAIN, device.id)
 
         # Remember valid device ids so we can do a cleanup of invalid ones later
         self._valid_device_ids = valid_ids
@@ -305,7 +300,6 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         Fetch profile data from API.
         """
         _LOGGER.debug(f"Config flow data")
-
         await self._api.async_detect_for_config()  
         
         return self._api.profile
@@ -313,27 +307,40 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
 
     async def _async_update_data(self):
         """
-        Fetch sensor data from API.
-        
-        This is the place to pre-process the data to lookup tables
-        so entities can quickly look up their data.
+        Poll for sensor data from API.
+
+        Normally, sensor data will come in via our subscribed change handlers.
+        However, we do an initial poll from Cache (with retries from Web) to retrieve the
+        initial list of devices and their entity data.
+        After that we do an infrequent periodical poll from Web to detect added or removed devices.
         """
         _LOGGER.debug(f"Update data for profile '{self._profile_name}'")
-
-        # Fetch the actual data
-        # Note: asyncio.TimeoutError and aiohttp.ClientError are already
-        # handled by the data update coordinator.
         await self._api.async_detect_data(self._profile_id, self._fetch_order)
 
-        # If this was the first fetch, then make sure all next ones use the correct fetch order (web or cache)
-        self._fetch_order = SmartWaterFetchOrder.NEXT
+        self._fetch_order = SmartWaterFetchOrder.NEXT   # make sure all next updates use the correct fetch order (web or cache)
 
         # Periodically detect changes in the profile and devices and trigger reload of the integration if needed.
         await self._async_detect_changes()
 
         return self._api.devices
     
-    
+
+    async def async_subscribe_to_push_data(self):
+        """
+        Make sure we are subscribed to receive updated profile, gateways and devices (tanks and pumps)
+        """
+        _LOGGER.info(f"Subscribe to changes in devices for profile '{self._profile_name}")
+        await self._api.async_subscribe_to_push_data(self._profile_id, self._async_push_data)
+
+
+    @callback
+    async def _async_push_data(self):
+        """
+        Push new sensor data from API to all our listening entities.
+        """
+        self.async_update_listeners()
+
+
     async def _async_detect_changes(self):
         """Detect changes in the profile and trigger a integration reload if needed"""
 
@@ -342,13 +349,13 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
             return
 
         # Detect any changes
-        reload = await self._async_detect_profile_changes()
+        reload = await self._async_detect_devices_changes()
         if reload:
             self._reload_count += 1
             self.hass.config_entries.async_schedule_reload(self._config_entry_id)
 
         
-    async def _async_detect_profile_changes(self)  -> bool:
+    async def _async_detect_devices_changes(self)  -> bool:
         """
         Detect any new devices. Returns True if a reload needs to be triggered else False
         """
@@ -360,14 +367,13 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
 
         for new_id in new_ids:
             device = self._api.devices.get(new_id)
-            device_name = device.get_value(SmartWaterDataKey.NAME) or "unknown"
             device_type = device.get_value(SmartWaterDataKey.TYPE) or "device"
 
             match device.family:
                 case SmartWaterDataFamily.GATEWAY:
-                    _LOGGER.info(f"Found newly added gateway {device.id} ({device_name}) for profile '{self._profile_name}'. Trigger reload of integration.")
+                    _LOGGER.info(f"Found newly added gateway {device.id} ({device.name}) for profile '{self._profile_name}'. Trigger reload of integration.")
                 case SmartWaterDataFamily.DEVICE | _:
-                    _LOGGER.info(f"Found newly added {device_type} {device.id} ({device_name}) for profile '{self._profile_name}'. Trigger reload of integration.")
+                    _LOGGER.info(f"Found newly added {device_type} {device.id} ({device.name}) for profile '{self._profile_name}'. Trigger reload of integration.")
 
         if len(new_ids) > 0:
             return True

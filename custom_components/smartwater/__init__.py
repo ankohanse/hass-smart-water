@@ -86,6 +86,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await coordinator.async_cleanup_entities(config_entry)
     await coordinator.async_cleanup_devices(config_entry)
 
+    # Subscribe coordinator to changes in remote data
+    await coordinator.async_subscribe_to_push_data()
+
     # Reload entry when it is updated via config flow
     config_entry.async_on_unload(config_entry.add_update_listener(_async_update_listener))
 

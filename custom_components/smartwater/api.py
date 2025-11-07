@@ -8,6 +8,7 @@ from typing import Any, Final
 import httpx
 import logging
 
+from homeassistant.core import callback
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import create_async_httpx_client
 
@@ -170,8 +171,8 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         self.profile: SmartWaterData = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id="", data={}, context={})
         self.devices: dict[str,SmartWaterData] = {}
 
-        # Other properties
-        self._fetch_ts: dict[str, datetime] = {}
+        # Coordinator listener to report back any changes in the data
+        self._async_data_listener = None
 
         # Persisted cached data in case communication to DAB Pumps fails
         self._hass: HomeAssistant = hass
@@ -184,57 +185,41 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
 
 
     async def async_on_unload(self, profile_id:str):
-
+        """
+        Called when the integration is being stopped/restarted
+        """
         # Do not logout or close the api. Another coordinator/config-entry might still be using it.
         # But do trigger write of cache
         await self._async_write_cache(profile_id, force=True)
 
 
     async def async_detect_for_config(self):
-        ex_first = None
+        """
+        Validate login credentials and retrieve the user profile.
+        Only used during config flow and always uses polling with no use of cache and no retry attempts
+        """
         dt_start = utcnow()
 
-        fetch_order = SmartWaterFetchOrder.CONFIG
-        for retry,fetch_method in enumerate(fetch_order):
-            try:
-                # Retry handling
-                await self._async_handle_retry(retry, fetch_method, fetch_order)
+        # Logout so we really force a subsequent login and not use an old token
+        await self._async_logout()
+        await self._async_login()
 
-                match fetch_method:
-                    case SmartWaterFetchMethod.WEB:
-                        # Logout so we really force a subsequent login and not use an old token
-                        await self._async_logout()
-                        await self._async_login()
-                        
-                        # Fetch the profile
-                        await self._async_detect_profile(expiry=0, ignore=False)
+        # Once login succeeds we have a profile_id
+        # Fetch the profile
+        await self._async_poll_profile(super().profile_id)
 
-                    case SmartWaterFetchMethod.CACHE:
-                        raise Exception(f"Fetch from cache is not supported during config")
-                
-                # Keep track of how many retries were needed and duration
-                # Keep track of how often the successfull fetch is from Web or is from Cache
-                self._update_statistics(retries = retry, duration = utcnow()-dt_start, fetch=fetch_method)
-                return True;
-            
-            except Exception as ex:
-                # Already logged at debug level in smartwater library
-                if not ex_first:
-                    ex_first = ex
-
-                await self._async_logout()
-            
-        # Keep track of how many retries were needed and duration
-        self._update_statistics(retries = retry, duration = utcnow()-dt_start)
-
-        if ex_first:
-            _LOGGER.warning(str(ex_first))
-            raise ex_first from None
-        
-        return False
+        # If we reach this point then the detect was successfull.
+        # Otherwise exceptions are handled by the callers.
     
         
     async def async_detect_data(self, profile_id: str, fetch_order: SmartWaterFetchOrder):
+        """
+        We mostly rely on the remote servers notifying us of changes of data (push).
+
+        However, we do an initial poll from Cache (with retries from Web) to retrieve the
+        initial list of devices and their entity data.
+        After that we do an infrequent periodical poll from Web to detect added or removed devices.
+        """
         ex_first = None
         dt_start = utcnow()
 
@@ -243,17 +228,10 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 # Retry handling
                 await self._async_handle_retry(retry, fetch_method, fetch_order)
 
-                ignore_periodic_refresh = fetch_order in [SmartWaterFetchOrder.NEXT]
-
                 match fetch_method:
                     case SmartWaterFetchMethod.WEB:
-                        # Once a day, attempt to refresh
-                        # - profile
-                        await self._async_detect_profile(expiry=24*60*60, ignore=ignore_periodic_refresh)
-
-                        # Always attempt to refresh
-                        # - devices (gateways, tank sensors and pump controllers)
-                        await self._async_detect_profile_devices(profile_id, expiry=5*60, ignore=False)
+                        await self._async_poll_profile(profile_id)
+                        await self._async_poll_profile_devices(profile_id)
 
                         # Update the persisted cache
                         await self._async_write_cache(profile_id)
@@ -268,7 +246,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
                 return True
             
             except Exception as ex:
-                # Already logged at debug level in smartwater library
+                _LOGGER.debug(ex)
                 if not ex_first:
                     ex_first = ex
                 await self._async_logout()
@@ -286,20 +264,20 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
     
 
     async def _async_handle_retry(self, retry: int, fetch_method: SmartWaterFetchMethod, fetch_order: SmartWaterFetchOrder):
-            """
-            """
-            if retry == 0:
-                # This is not a retry, but the first attempt
-                return
+        """
+        """
+        if retry == 0:
+            # This is not a retry, but the first attempt
+            return
 
-            fetch_history: tuple[SmartWaterFetchMethod] = fetch_order[slice(retry)]
+        fetch_history: tuple[SmartWaterFetchMethod] = fetch_order[slice(retry)]
 
-            if fetch_method in fetch_history:
-                # Wait a bit before the next fetch using same method
-                _LOGGER.info(f"Retry from {str(fetch_method)} in {API_RETRY_DELAY} seconds.")
-                await asyncio.sleep(API_RETRY_DELAY)
-            else:
-                _LOGGER.info(f"Retry from {str(fetch_method)} now")
+        if fetch_method in fetch_history:
+            # Wait a bit before the next fetch using same method
+            _LOGGER.info(f"Retry from {str(fetch_method)} in {API_RETRY_DELAY} seconds.")
+            await asyncio.sleep(API_RETRY_DELAY)
+        else:
+            _LOGGER.info(f"Retry from {str(fetch_method)} now")
 
 
     async def _async_login(self):
@@ -311,82 +289,127 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         """Logout"""
         await super().logout()
 
-        self._fetch_ts.clear()
 
-
-    async def _async_detect_profile(self, expiry:int=0, ignore:bool=False):
+    async def _async_poll_profile(self, profile_id:str):
         """
         Attempt to refresh the profile
         """
-        fetch_context = f"profile"
+        profile_data = await super().fetch_profile()
 
-        if (utcnow() - self._fetch_ts.get(fetch_context, utcmin())).total_seconds() < expiry:
-            return  # Not yet expired
-        
-        try:
-            data = await super().fetch_profile()
-
-            context = {
-                'username': self._username,
-            }
-            self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=super().profile_id, data=data, context=context)
-            self._fetch_ts[fetch_context] = utcnow()
-
-        except Exception as e:
-            # Ignore issues if this is just a periodic update
-            if ignore:
-                _LOGGER.info(f"{e}")
-            else:
-                raise e from None
+        self._on_profile_change(profile_id, profile_data)
 
 
-    async def _async_detect_profile_devices(self, profile_id:str, expiry:int=0, ignore:bool=False):
+    async def _async_poll_profile_devices(self, profile_id:str):
         """
         Fetch all gateways and all devices in a profile
         """
-        fetch_context = f"devices for {profile_id}"
+        old_device_ids = set(self.devices.keys())
+        new_device_ids = set()
 
-        if (utcnow() - self._fetch_ts.get(fetch_context, utcmin())).total_seconds() < expiry:
-            return  # Not yet expired
+        # Fetch all gateways in this profile
+        gateways_data = await super().fetch_gateways()
 
+        for gateway_id,gateway_data in gateways_data.items():
+            await self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_data)
+            new_device_ids.add(gateway_id)
+
+            # Fetch all devices for this gateway
+            gw_devices_data = await super().fetch_devices(gateway_id)
+
+            for device_id,device_data in gw_devices_data.items():
+                await self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_data)
+                new_device_ids.add(device_id)
+
+        # Cleanup - remove any old devices that we don't see anymore
+        del_device_ids = old_device_ids - new_device_ids
+        for id in del_device_ids:
+            self.devices.pop(id, None)
+
+
+    async def async_subscribe_to_push_data(self, profile_id: str, callback):
+        """
+        Subscribe to changes in profile. gateway and devices (tanks and pumps)
+        """
         try:
-            all_devices = {}
+            # Remember how to report back data changes to the coordinator
+            self._async_data_listener = callback
 
-            # Fetch all profile gateways and wrap into SmartWaterData objects
-            gateways_data = await super().fetch_gateways()
+            # Register listeners for changes in remote data
+            await super().on_profile(self._on_profile_change)
 
-            context = {
-                'profile_id': profile_id,
-            }   
-            gateways = { id:SmartWaterData(family=SmartWaterDataFamily.GATEWAY, id=id, data=data, context=context) for id,data in gateways_data.items() }
-            all_devices.update(gateways)
-
-            # Fetch all devices for all gateways and wrap into SmartWaterData objects
-            for gateway_id in gateways.keys():
-                gw_devices_data = await super().fetch_devices(gateway_id)
-
-                context = {
-                    'profile_id': profile_id,
-                    'gateway_id': gateway_id,
-                }
-                gw_devices = { id:SmartWaterData(SmartWaterDataFamily.DEVICE, id, data, context) for id,data in gw_devices_data.items() }
-                all_devices.update(gw_devices)
-
-            # Save to our internal dict
-            self.devices = all_devices
-            self._fetch_ts[fetch_context] = utcnow()
+            for device_id, device in self.devices.items():
+                match device.family:
+                    case SmartWaterDataFamily.GATEWAY: await super().on_gateway(device_id, self._on_gateway_change)
+                    case SmartWaterDataFamily.DEVICE:  await super().on_device(device_id, self._on_device_change)
 
         except Exception as e:
-            # Ignore issues if this is just a periodic update
-            if ignore:
-                _LOGGER.info(f"{e}")
-            else:
-                raise e from None
+            _LOGGER.info(f"{e}")
+
+
+    def _on_profile_change(self, profile_id: str, profile_data: dict):
+        """
+        AsyncSmartWaterApi.on_profile() needs a sync callback function.
+        We jump back into the async event loop here.
+        """
+        self._hass.create_task(self._async_on_profile_change(profile_id, profile_data))
+
+
+    async def _async_on_profile_change(self, profile_id: str, profile_data: dict):
+        """Handle updated profile received from the remote servers"""
+        try:
+            context = {
+                'username': self._username,
+            }
+            self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=profile_id, data=profile_data, context=context)
+
+            _LOGGER.debug(f"Received profile data for {self._username} ({profile_id})")
+
+            # Signal to the coordinator that there were changes in the api data
+            if self._async_data_listener is not None:
+                await self._async_data_listener()
+
+        except Exception as e:
+            _LOGGER.info(f"{e}")
+
+
+    def _on_gateway_change(self, gateway_id: str, gateway_data: dict):
+        """
+        AsyncSmartWaterApi.on_gateway() needs a sync callback function.
+        We jump back into the async event loop here.
+        """
+        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_data))
+        
+
+    def _on_device_change(self, device_id: str, device_data: dict):
+        """
+        AsyncSmartWaterApi.on_device() needs a sync callback function.
+        We jump back into the async event loop here.
+        """
+        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_data))
+        
+
+    async def _async_on_device_change(self, device_family, device_id: str, device_data: dict):
+        """Handle updated device (gateway, tank or pump) received from the remote servers"""
+        try:
+            context = {
+                "profile_id": super().profile_id,
+            }
+            device = SmartWaterData(family=device_family, id=device_id, data=device_data, context=context) 
+        
+            _LOGGER.debug(f"Received device data for {device.name} ({device.id})")
+            self.devices[device.id] = device
+
+            # Signal to the coordinator that there were changes in the api data
+            if self._async_data_listener is not None:
+                await self._async_data_listener()
+
+        except Exception as e:
+            _LOGGER.info(f"{e}")
 
 
     async def _async_write_cache(self, profile_id:str, force:bool=False):
         """
-        Write maps retrieved from api to persisted storage
+        Write data retrieved from api to persisted storage
         """
  
         # Make sure we have read the storage file before we attempt set values and write it
@@ -405,7 +428,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
 
     async def _async_read_cache(self, profile_id: str):
         """
-        Read internal maps from persisted storage
+        Read internal data from persisted storage
         """             
 
         # Read from persisted file if not already read
