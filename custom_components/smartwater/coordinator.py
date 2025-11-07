@@ -25,6 +25,7 @@ from .const import (
     NAME,
     COORDINATOR,
     MANUFACTURER,
+    PREFIX_NAME,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     COORDINATOR_POLLING_INTERVAL,
@@ -247,7 +248,7 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
             dr.async_get_or_create(
                 config_entry_id = config_entry.entry_id,
                 identifiers = {(DOMAIN, device.id)},
-                name = device.name,
+                name = f"{PREFIX_NAME} {device.name}",
                 manufacturer =  MANUFACTURER,
                 model = device.get_value(SmartWaterDataKey.TYPE),
                 serial_number = device.get_value(SmartWaterDataKey.SERIAL) or device.id,

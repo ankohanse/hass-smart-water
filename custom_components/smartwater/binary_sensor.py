@@ -22,7 +22,6 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get
 from homeassistant.helpers.event import async_track_time_interval
@@ -37,7 +36,6 @@ from collections import defaultdict
 from collections import namedtuple
 
 from .const import (
-    DOMAIN,
     BINARY_SENSOR_VALUES_ON,
     BINARY_SENSOR_VALUES_OFF,
     STATUS_VALIDITY_PERIOD,
@@ -94,11 +92,6 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         
         # update creation-time only attributes
         self._attr_device_class = self.get_binary_sensor_device_class()
-
-        # Link to the device
-        self._attr_device_info = DeviceInfo(
-            identifiers = {(DOMAIN, device.id)},
-        )
 
         # Create all value related attributes
         data_value = device.get_value(key)

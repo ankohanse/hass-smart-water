@@ -16,7 +16,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.exceptions import IntegrationError
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get
@@ -32,7 +31,6 @@ from collections import defaultdict
 from collections import namedtuple
 
 from .const import (
-    DOMAIN,
     STATUS_VALIDITY_PERIOD,
     utcnow,
 )
@@ -81,11 +79,6 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         # update creation-time only attributes that are specific to class Sensor
         self._attr_state_class = self.get_sensor_state_class()
         self._attr_device_class = self.get_sensor_device_class() 
-
-        # Link to the device
-        self._attr_device_info = DeviceInfo(
-            identifiers = {(DOMAIN, device.id)},
-        )
         
         # Create all value related attributes
         data_value = device.get_value(key)

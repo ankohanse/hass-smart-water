@@ -24,12 +24,14 @@ from homeassistant.const import UnitOfVolume
 from homeassistant.const import UnitOfVolumeFlowRate
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfTime
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 
 from .const import (
+    DOMAIN,
     ATTR_DATA_VALUE,
     ATTR_STORED_DATA_VALUE,
-    DOMAIN,
+    PREFIX_ID,
     utcnow,
 )
 from .coordinator import (
@@ -77,8 +79,8 @@ class SmartWaterEntity(RestoreEntity):
         self._datapoint = device.get_datapoint(key)
 
         # The unique identifiers for this sensor within Home Assistant
-        self.object_id       = SmartWaterEntity.create_id(DOMAIN, device.id, key)   # smartwater_<device_id>_<key>
-        self._attr_unique_id = SmartWaterEntity.create_id(DOMAIN, device.name, key) # smartwater_<device_name>_<key>
+        self.object_id       = SmartWaterEntity.create_id(PREFIX_ID, device.id, key)   # smartwater_<device_id>_<key>
+        self._attr_unique_id = SmartWaterEntity.create_id(PREFIX_ID, device.name, key) # smartwater_<device_name>_<key>
 
         self._attr_has_entity_name = True
         self._attr_name = self._datapoint.name
@@ -93,6 +95,11 @@ class SmartWaterEntity(RestoreEntity):
 
         self._attr_entity_registry_enabled_default = self.get_entity_enabled_default()
         self._attr_entity_category = self.get_entity_category()
+
+        # Link to the device
+        self._attr_device_info = DeviceInfo(
+            identifiers = {(DOMAIN, device.id)},
+        )
 
 
     @property

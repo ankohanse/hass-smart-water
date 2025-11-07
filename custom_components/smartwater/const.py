@@ -36,7 +36,10 @@ CONF_PROFILE_NAME = "profile_name"
 
 DIAGNOSTICS_REDACT = { CONF_PASSWORD, 'client_secret' }
 
+# To compose entity unique id and names
 MANUFACTURER = "Smart Water Technologies"
+PREFIX_ID = "smartwater"
+PREFIX_NAME = "Smart Water"
 
 # Extra attributes displayed in entity attributes
 ATTR_DATA_VALUE = "smartwater_value"
