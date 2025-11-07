@@ -46,7 +46,6 @@ from .entity_base import (
     SmartWaterEntity,
 )
 from .entity_helper import (
-    SmartWaterEntityHelperFactory,
     SmartWaterEntityHelper,
 )
 
@@ -58,8 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     """
     Setting up the adding and updating of sensor entities
     """
-    helper = SmartWaterEntityHelperFactory.create(hass, config_entry)
-    await helper.async_setup_entry(Platform.SENSOR, SmartWaterSensor, async_add_entities)
+    await SmartWaterEntityHelper(hass, config_entry).async_setup_entry(Platform.SENSOR, SmartWaterSensor, async_add_entities)
 
 
 class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
@@ -118,7 +116,9 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         """
         Set entity value, unit and icon
         """
-        
+        changed = super()._update_value(data_value, force)
+
+        # Convert from SmartWater data value to Home Assistant attributes
         match self._datapoint.fmt:
             case 'f1' | 'f2' | 'f3' | 'f4':
                 weight = 1
@@ -147,9 +147,7 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
                 attr_val = self._datapoint.opt.get(str(data_value), data_value) if data_value is not None and isinstance(self._datapoint.opt, dict) else None
                 attr_unit = None
 
-        # update value if it has changed
-        changed = super()._update_value(data_value, force)
-
+        # update Home Assistant attributes
         if force or self._attr_native_value != attr_val:
 
             self._attr_native_value = attr_val

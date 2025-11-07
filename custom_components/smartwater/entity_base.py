@@ -46,12 +46,10 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass
 class SmartWaterEntityExtraData(ExtraStoredData):
     """Object to hold extra stored data."""
-
     data_value: Any = None
     
     def as_dict(self) -> dict[str, Any]:
         """Return a dict representation of the sensor data."""
-
         return {
             ATTR_STORED_DATA_VALUE: self.data_value
         }
@@ -59,7 +57,6 @@ class SmartWaterEntityExtraData(ExtraStoredData):
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
         """Initialize a stored sensor state from a dict."""
-
         return cls(
             data_value = restored.get(ATTR_STORED_DATA_VALUE)
         )
@@ -80,8 +77,8 @@ class SmartWaterEntity(RestoreEntity):
         self._datapoint = device.get_datapoint(key)
 
         # The unique identifiers for this sensor within Home Assistant
-        self.object_id       = SmartWaterEntity.create_id(DOMAIN, device.id, key)   # Device.id + params.key
-        self._attr_unique_id = SmartWaterEntity.create_id(DOMAIN, device.name, key) # Device.name + params.key
+        self.object_id       = SmartWaterEntity.create_id(DOMAIN, device.id, key)   # smartwater_<device_id>_<key>
+        self._attr_unique_id = SmartWaterEntity.create_id(DOMAIN, device.name, key) # smartwater_<device_name>_<key>
 
         self._attr_has_entity_name = True
         self._attr_name = self._datapoint.name
@@ -94,7 +91,7 @@ class SmartWaterEntity(RestoreEntity):
         self._unit = self.get_unit()        # don't apply directly to _attr_unit, some entities don't have it
         self._attr_icon = self.get_icon()
 
-        self._attr_entity_registry_enabled_default = self.get_enabled_default()
+        self._attr_entity_registry_enabled_default = self.get_entity_enabled_default()
         self._attr_entity_category = self.get_entity_category()
 
 
@@ -102,19 +99,7 @@ class SmartWaterEntity(RestoreEntity):
     def suggested_object_id(self) -> str | None:
         """Return input for object id."""
         return self.object_id
-    
-    
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for use in home assistant."""
-        return self._attr_unique_id
-    
-    
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        return self._attr_name
-    
+
 
     @property
     def extra_state_attributes(self) -> dict[str, str | list[str]]:
@@ -127,13 +112,13 @@ class SmartWaterEntity(RestoreEntity):
             state_attr[ATTR_DATA_VALUE] = self._data_value
 
         return state_attr        
-    
+
+
     @property
     def extra_restore_state_data(self) -> SmartWaterEntityExtraData | None:
         """
         Return entity specific state data to be restored on next HA run.
         """
-
         return SmartWaterEntityExtraData(
             data_value = self._data_value
         )
@@ -173,23 +158,14 @@ class SmartWaterEntity(RestoreEntity):
         """
         changed = False
 
-        if self._data_value != data_value:
+        if force or self._data_value != data_value:
+
             self._data_value = data_value
             changed = True
 
         return changed
 
 
-    def get_enabled_default(self):
-        pf = self._datapoint.pf
-        parts = pf.split(';')
-
-        if len(parts) > 1 and parts[1]=='d':
-            return False
-        else:
-            return True
-
-    
     def get_unit(self):
         """Convert from Datapoint unit abbreviation to Home Assistant units"""
         if self._datapoint is None:
@@ -212,7 +188,6 @@ class SmartWaterEntity(RestoreEntity):
     
     def get_icon(self):
         """Convert from unit to icon"""
-
         match self._datapoint.key:
             case 'battery_level':  return None  # Automatically assigned by HA with battery-low, battery-med or battery-high
             case 'water_level':    return 'mdi:water-percent'

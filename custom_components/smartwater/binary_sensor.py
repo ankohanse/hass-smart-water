@@ -53,7 +53,6 @@ from .entity_base import (
     SmartWaterEntity,
 )
 from .entity_helper import (
-    SmartWaterEntityHelperFactory,
     SmartWaterEntityHelper,
 )
 
@@ -72,8 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     """
     Setting up the adding and updating of binary_sensor entities
     """
-    helper = SmartWaterEntityHelperFactory.create(hass, config_entry)
-    await helper.async_setup_entry(Platform.BINARY_SENSOR, SmartWaterBinarySensor, async_add_entities)
+    await SmartWaterEntityHelper(hass, config_entry).async_setup_entry(Platform.BINARY_SENSOR, SmartWaterBinarySensor, async_add_entities)
 
 
 class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEntity):
@@ -131,7 +129,9 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         """
         Set entity value, unit and icon
         """
-        
+        changed = super()._update_value(data_value, force)
+
+        # Convert from SmartWater data value to Home Assistant attributes
         if data_value in BINARY_SENSOR_VALUES_ON:
             is_on = True
         elif data_value in BINARY_SENSOR_VALUES_OFF:
@@ -139,9 +139,7 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         else:
             is_on = None
 
-        # update value if it has changed
-        changed = super()._update_value(data_value, force)
-
+        # Update Home Assistant attributes
         if force or self._attr_is_on != is_on:
             
             self._attr_is_on = is_on

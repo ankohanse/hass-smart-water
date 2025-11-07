@@ -23,28 +23,16 @@ from custom_components.smartwater.data import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class SmartWaterEntityHelperFactory:
-
-    @staticmethod
-    def create(hass: HomeAssistant, config_entry: ConfigEntry):
-        """
-        Get entity helper for a config entry.
-        The entry is short lived (only during init) and does not contain state data,
-        therefore no need to cache it in hass.data
-        """
-
-        # Get an instance of the SmartWaterCoordinator for this install_id
-        coordinator = SmartWaterCoordinatorFactory.create(hass, config_entry)
-
-        # Get an instance of our helper
-        return SmartWaterEntityHelper(hass, coordinator)
-
-
 class SmartWaterEntityHelper:
     """My custom helper to provide common functions."""
 
-    def __init__(self, hass: HomeAssistant, coordinator: SmartWaterCoordinator):
-        self._coordinator = coordinator
+    def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry):
+        """
+        Get entity helper for a config entry.
+        The helper is short lived (only during init) and does not contain state data,
+        therefore no need to create and cache it in hass.data via a Factory class.
+        """
+        self._coordinator = SmartWaterCoordinatorFactory.create(hass, config_entry)
         self._entity_registry = entity_registry.async_get(hass)
 
 
@@ -54,15 +42,12 @@ class SmartWaterEntityHelper:
         """
         # Get data from the coordinator
         devices:dict[str,SmartWaterData] = self._coordinator.data
-
         if not devices:
             # If data returns False or is empty, log an error and return
             _LOGGER.warning(f"Failed to fetch entity data - authentication failed or no data.")
             return
 
-        _LOGGER.debug(f"Create {target_platform} entities for profile '{self._coordinator.profile_name}'")
-
-        # Iterate all statuses to create sensor entities
+        # Iterate all devices and platform datapoints to create sensor entities
         entities = []
         valid_unique_ids: list[str] = []
 
@@ -70,7 +55,6 @@ class SmartWaterEntityHelper:
             for datapoint in device.get_datapoints_for_platform(target_platform):
 
                 # Create a Sensor, Binary_Sensor, Number, Select, Switch or other entity for this datapoint
-                entity = None
                 try:
                     entity = target_class(self._coordinator, device, datapoint.key)
                     entities.append(entity)
