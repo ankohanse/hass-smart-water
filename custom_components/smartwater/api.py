@@ -239,7 +239,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             }
             self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=profile_id, dict=profile_dict, context=context)
 
-            _LOGGER.debug(f"Received profile data for {self._username} ({profile_id})")
+            _LOGGER.info(f"Received profile data for {self._username} ({profile_id})")
 
             # Signal to the coordinator that there were changes in the api data
             if self._async_data_listener is not None:
@@ -273,7 +273,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             }
             device = SmartWaterData(family=device_family, id=device_id, dict=device_dict, context=context) 
         
-            _LOGGER.debug(f"Received device data for {device.name} ({device.id})")
+            _LOGGER.info(f"Received device data for {device.name} ({device.id})")
             self.devices[device.id] = device
 
             # Signal to the coordinator that there were changes in the api data

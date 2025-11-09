@@ -318,7 +318,7 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         Normally, sensor data will come in via our subscribed change handlers.
         However, we do an infrequent periodical poll to detect added or removed devices.
         """
-        _LOGGER.debug(f"Update data for profile '{self._profile_name}'")
+        _LOGGER.info(f"Start detect of new gateways and devices for profile '{self._profile_name}'")
         try:
             await self._api.async_detect_data()
             await self._async_detect_changes()
