@@ -39,6 +39,7 @@ from .coordinator import (
 )
 from .data import (
     SmartWaterData,
+    SmartWaterDeviceConfig,
 )
 
 # Define logger
@@ -70,17 +71,18 @@ class SmartWaterEntity(RestoreEntity):
     (SmartWaterSensor, SmartWaterBinarySensor, ...)
     """
     
-    def __init__(self, coordinator: SmartWaterCoordinator, device: SmartWaterData, key: str):
+    def __init__(self, coordinator: SmartWaterCoordinator, device_config: SmartWaterDeviceConfig, key: str):
 
         self._coordinator = coordinator
-        self._device_id = device.id
+        self._device_id = device_config.id
+        self._device_name = device_config.name
         
         # Remember the static meta parameters for this entity
-        self._datapoint = device.get_datapoint(key)
+        self._datapoint = device_config.get_datapoint(key)
 
         # The unique identifiers for this sensor within Home Assistant
-        self.object_id       = SmartWaterEntity.create_id(PREFIX_ID, device.id, key)   # smartwater_<device_id>_<key>
-        self._attr_unique_id = SmartWaterEntity.create_id(PREFIX_ID, device.name, key) # smartwater_<device_name>_<key>
+        self.object_id       = SmartWaterEntity.create_id(PREFIX_ID, self._device_id, key)   # smartwater_<device_id>_<key>
+        self._attr_unique_id = SmartWaterEntity.create_id(PREFIX_ID, self._device_name, key) # smartwater_<device_name>_<key>
 
         self._attr_has_entity_name = True
         self._attr_name = self._datapoint.name
@@ -98,7 +100,7 @@ class SmartWaterEntity(RestoreEntity):
 
         # Link to the device
         self._attr_device_info = DeviceInfo(
-            identifiers = {(DOMAIN, device.id)},
+            identifiers = {(DOMAIN, self._device_id)},
         )
 
 
@@ -148,7 +150,7 @@ class SmartWaterEntity(RestoreEntity):
         # Get last data from previous HA run                      
         last_state = await self.async_get_last_state()
         last_extra = await self.async_get_last_extra_data()
-        
+
         if last_state and last_extra:
             # Get entity value from restored data
             dict_extra = last_extra.as_dict()
@@ -192,13 +194,28 @@ class SmartWaterEntity(RestoreEntity):
                 _LOGGER.warning(f"Encountered a unit or measurement '{self._datapoint.unit}' for '{self._datapoint.fam}:{self._datapoint.key}' that may not be supported by Home Assistant. Please contact the integration developer to have this resolved.")
                 return self._datapoint.unit
     
-    
+        
+    ICONS_TREND_LEVEL = {
+        0:  'mdi:wave',
+        1:  'mdi:wave-arrow-up',
+        2:  'mdi:wave-arrow-up',
+        3:  'mdi:wave-arrow-up', 
+        4:  'mdi:wave-arrow-up',
+        5:  'mdi:wave-arrow-up',
+        -1: 'mdi:wave-arrow-down', 
+        -2: 'mdi:wave-arrow-down',
+        -3: 'mdi:wave-arrow-down', 
+        -4: 'mdi:wave-arrow-down', 
+        -5: 'mdi:wave-arrow-down',
+    }
+
+
     def get_icon(self):
         """Convert from unit to icon"""
         match self._datapoint.key:
             case 'battery_level':  return None  # Automatically assigned by HA with battery-low, battery-med or battery-high
             case 'water_level':    return 'mdi:water-percent'
-            case 'trend_level':    return { 'flat':'mdi:waves', 'up':'mdi:waves-arrow-up', 'down': 'mdi:waves-arrow-down' }.get(self._data_value, None)
+            case 'trend_level':    return self.ICONS_TREND_LEVEL.get(self._data_value or 0, None)
 
         match self._datapoint.unit:
             case 'd':       return 'mdi:timer'

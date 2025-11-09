@@ -20,6 +20,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+OPT_TREND_LEVEL = {
+    '0':'flat',
+    '1':'up', '2':'up', '3':'up', '4':'up', '5':'up',
+    '-1': 'down', '-2':'down', '-3':'down', '-4':'down', '-5': 'down',
+}
+
+
 @dataclass
 class DP:
     fam: str            # Device Family  
@@ -69,7 +76,7 @@ DATAPOINTS = [
     # For Device.Tank
     DP(fam="d.tank", key="water_level",        name="Water Level",          pf="sen", flag="e,none", path="waterLevel",              fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="water_height",       name="Water Height",         pf="sen", flag="e,none", path="#waterHeight",            fmt="f1", unit="m",    opt={}),
-    DP(fam="d.tank", key="trend_level",        name="Trend Level",          pf="sen", flag="e,none", path="trendLevel",              fmt="e",  unit="",     opt={ "0": "flat", "1": "up", "-1": "down" } ),
+    DP(fam="d.tank", key="trend_level",        name="Trend Level",          pf="sen", flag="e,none", path="trendLevel",              fmt="e",  unit="",     opt=OPT_TREND_LEVEL),
     DP(fam="d.tank", key="days_remaining",     name="Days remaining",       pf="sen", flag="e,none", path="daysRemaining",           fmt="i",  unit="d",    opt={}),
     DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="e,none", path="avgDailyUse",             fmt="f2", unit="%",    opt={}),
     DP(fam="d.tank", key="battery_level",      name="Battery Level",        pf="sen", flag="e,diag", path="batteryLevel",            fmt="i",  unit="%",    opt={}),
@@ -115,7 +122,6 @@ DATAPATHS_EXTRA = {
     '#waterHeight': "(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight",
 }
 
-
 class SmartWaterDataFamily(StrEnum):
     PROFILE = "pr"
     GATEWAY = "gw"
@@ -129,39 +135,32 @@ class SmartWaterDataKey(StrEnum):
     TYPE = "type"
     SERIAL = "serial"
     VERSION = "version"
-    ADDRESS = "address"
-    GATEWAY_ID = "gatewayId"
+    GATEWAY_ID = "gateway_id"
 
 
 class SmartWaterDatapoint(DP):
     def __init__(self, dp: DP):
         super().__init__(**asdict(dp))
 
+        # Resolve path if needed
+        if self.path.startswith('#'):
+            self.path = DATAPATHS_EXTRA.get(self.path)
+        
+        # Resolve flags
         flag_parts = self.flag.split(',')
 
         self.flag_enabled  = flag_parts[0] if len(flag_parts) > 0 else ''
         self.flag_category = flag_parts[1] if len(flag_parts) > 1 else ''
 
 
-class SmartWaterData:
-    def __init__(self, family: SmartWaterDataFamily, id: str, data: dict[str,Any], context: dict[str,Any]):
-        # Set initial values for all properties
-        self.family = family
-        self.family_sub = family  # Must get initial value before any get_value lookups below
-        self.id = id
-        self.name = id
+    @staticmethod
+    def for_family_and_key(family_sub: str, key: str) -> 'SmartWaterDatapoint':
 
-        self._data = data | ({ 'context': context } if context is not None else {})
+        return next( (SmartWaterDatapoint(dp) for dp in DATAPOINTS if family_sub.startswith(dp.fam) and dp.key==key), None )
 
-        # Get derived properties; this may overwrite earlier initial values
-        sub = self.get_value(SmartWaterDataKey.TYPE)
-        name = self.get_value(SmartWaterDataKey.NAME)
 
-        self.family_sub = f"{family}.{sub}" if sub is not None else family
-        self.name = name or sub or id
-
-            
-    def get_datapoints_for_platform(self, target_platform: str) -> list[SmartWaterDatapoint]:
+    @staticmethod
+    def for_family_and_platform(family_sub: str, target_platform: str) -> list['SmartWaterDatapoint']:
 
         # Get abbreviated platform str matching the target platform
         pf:str = PLATFORM_TO_PF.get(target_platform, None)
@@ -170,33 +169,63 @@ class SmartWaterData:
             return []
 
         # Collect all datapoints associated with this device family and for this platform 
-        return [ SmartWaterDatapoint(dp) for dp in DATAPOINTS if dp.pf==pf and self.family_sub.startswith(dp.fam) ]
+        return [ SmartWaterDatapoint(dp) for dp in DATAPOINTS if family_sub.startswith(dp.fam) and dp.pf==pf  ]
 
 
-    def get_datapoint(self, key: SmartWaterDataKey|str) -> SmartWaterDatapoint:
-        for dp in DATAPOINTS:
-            if dp.key == key and self.family_sub.startswith(dp.fam):
-                return SmartWaterDatapoint(dp)
 
-        return None
+class SmartWaterData:
+    def __init__(self, family: SmartWaterDataFamily, id: str, dict: dict[str,Any]=None, context: dict[str,Any]=None):
+        # Set initial values for all properties
+        self._family = family
+        self._id = id
+        self._name = None
+        self._type = None
+        
+        self._dict = dict
+        if context is not None:
+            self._dict = self._dict | { 'context': context }
+
+        # Get derived properties from dict; this may overwrite earlier initial values
+        self._name = self.get_value(SmartWaterDataKey.NAME)
+        self._type = self.get_value(SmartWaterDataKey.TYPE)
 
 
+    @property
+    def family(self):
+        return self._family
+    
+    @property
+    def family_sub(self):
+        return f"{self.family}.{self.type}" if self.type is not None else self.family
+    
+    @property
+    def id(self):
+        return self._id
+            
+    @property
+    def name(self):
+        return self._name or self._type or self._id
+    
+    @property
+    def type(self):
+        return self._type
+            
+            
     def get_value(self, key: SmartWaterDataKey|str) -> Any:
 
         # get datapoint that defines properties for this key within this family
-        datapoint = self.get_datapoint(key)
-        if datapoint is None or datapoint.path is None:
+        datapoint = SmartWaterDatapoint.for_family_and_key(self.family_sub, key)
+        if datapoint is None:
             return None
-
-        # Apply custom extra paths
-        path = DATAPATHS_EXTRA.get(datapoint.path, datapoint.path) if datapoint.path.startswith('#') else datapoint.path
+        if self._dict is None:
+            return None
 
         try:
             # Lookup the value for this datapoint
-            return Jsonata(path).evaluate(self._data)
+            return Jsonata(datapoint.path).evaluate(self._dict)
         
         except Exception as ex:
-            _LOGGER.debug(f"Could not resolve {path} for {key}: {str(ex)}")
+            _LOGGER.debug(f"Could not resolve path {datapoint.path} for {key}: {str(ex)}")
 
         return None
         
@@ -204,22 +233,72 @@ class SmartWaterData:
     def to_dict(self):
         return {
             "family": self.family,
-            "family_sub": self.family_sub,
             "id": self.id,
             "name": self.name,
-            "data": self._data,
+            "dict": self._dict
         }
 
 
+@dataclass
+class SmartWaterDeviceConfig():
+
+    family: str
+    family_sub: str
+    id: str
+    name: str
+    type: str
+    serial: str
+    version: str
+    gateway_id: str
+
+
     @staticmethod
-    def from_dict(d: dict[str,Any]) -> 'SmartWaterData':
-        family  = d.get("family", None)
-        id      = d.get("id", None)
-        data    = d.get("data", None)
+    def from_data(data: SmartWaterData):
+        return SmartWaterDeviceConfig(
+            family = data.family,
+            family_sub = data.family_sub,
+            id = data.id,
+            name = data.name,
+            type = data.type,
+            serial = data.get_value(SmartWaterDataKey.SERIAL) or data.id,
+            version = data.get_value(SmartWaterDataKey.VERSION),
+            gateway_id = data.get_value(SmartWaterDataKey.GATEWAY_ID)
+        )    
+            
 
-        if family is None or id is None or data is None:
-            raise SmartWaterDataError()
-        
-        return SmartWaterData(family, id, data, None)
+    def get_datapoints_for_platform(self, target_platform: str) -> list[SmartWaterDatapoint]:
+        return SmartWaterDatapoint.for_family_and_platform(self.family_sub, target_platform)
 
-        
+
+    def get_datapoint(self, key: SmartWaterDataKey|str) -> SmartWaterDatapoint:
+        return SmartWaterDatapoint.for_family_and_key(self.family_sub, key)
+
+
+    def to_dict(self):
+        """Create a dict representing the values in the SmartWaterDeviceConfig object"""
+        result = {
+            "family": self.family,
+            "family_sub": self.family_sub,
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "serial": self.serial,
+            "version": self.version,
+            "gateway_id": self.gateway_id,
+        }
+        return {k:v for k,v in result.items() if v is not None}
+
+
+    @staticmethod
+    def from_dict(d: dict[str,Any]) -> 'SmartWaterDeviceConfig':
+        """Construct a new SmartWaterDeviceConfig object from a dict"""
+        return SmartWaterDeviceConfig(
+            family     = d.get("family", ""),
+            family_sub = d.get("family_sub", ""),
+            id         = d.get("id", None),
+            name       = d.get("name", None),
+            type       = d.get("type", None),
+            serial     = d.get("serial", None),
+            version    = d.get("version", None),
+            gateway_id = d.get("gateway_id", None),
+        )

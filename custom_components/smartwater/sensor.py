@@ -39,6 +39,7 @@ from .coordinator import (
 )
 from .data import (
     SmartWaterData,
+    SmartWaterDeviceConfig,
 )
 from .entity_base import (
     SmartWaterEntity,
@@ -63,13 +64,13 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
     Representation of an entity that is part of a gateway, tank or pump.
     """
     
-    def __init__(self, coordinator: SmartWaterCoordinator, device: SmartWaterData, key: str) -> None:
+    def __init__(self, coordinator: SmartWaterCoordinator, device_config: SmartWaterDeviceConfig, key: str) -> None:
         """ 
         Initialize the sensor. 
         """
 
         CoordinatorEntity.__init__(self, coordinator)
-        SmartWaterEntity.__init__(self, coordinator, device, key)
+        SmartWaterEntity.__init__(self, coordinator, device_config, key)
 
         # The unique identifiers for this sensor within Home Assistant
         self.entity_id = ENTITY_ID_FORMAT.format(self._attr_unique_id)   # Domain + Device.name + params.key
@@ -80,9 +81,11 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         self._attr_state_class = self.get_sensor_state_class()
         self._attr_device_class = self.get_sensor_device_class() 
         
-        # Create all value related attributes
-        data_value = device.get_value(key)
-        self._update_value(data_value, force=True)
+        # Create all value related attributes (but with unknown value).
+        # After this constructor ends, base class SmartWaterEntity.async_added_to_hass() will 
+        # set the value using the restored value from the last HA run. Or otherwise it will
+        # be set when the first push-data is received.
+        self._update_value(None, force=True)
     
     
     @callback
@@ -92,14 +95,14 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         """
 
         # find the correct device corresponding to this sensor
-        devices:dict[str,SmartWaterData] = self._coordinator.data
+        devices_data:dict[str,SmartWaterData] = self._coordinator.data
 
-        device = devices.get(self._device_id)
-        if device is None:
+        device_date = devices_data.get(self._device_id)
+        if device_date is None:
             return        
 
         # Update value related attributes
-        data_value = device.get_value(self._datapoint.key)
+        data_value = device_date.get_value(self._datapoint.key)
 
         if self._update_value(data_value):
             self.async_write_ha_state()

@@ -15,9 +15,6 @@ from .coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator
 )
-from custom_components.smartwater.data import (
-    SmartWaterData,
-)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,29 +37,22 @@ class SmartWaterEntityHelper:
         """
         Setting up the adding and updating of sensor and binary_sensor entities
         """
-        # Get data from the coordinator
-        devices:dict[str,SmartWaterData] = self._coordinator.data
-        if not devices:
-            # If data returns False or is empty, log an error and return
-            _LOGGER.warning(f"Failed to fetch entity data - authentication failed or no data.")
-            return
-
         # Iterate all devices and platform datapoints to create sensor entities
         entities = []
         valid_unique_ids: list[str] = []
 
-        for device in devices.values():
-            for datapoint in device.get_datapoints_for_platform(target_platform):
+        for device_config in self._coordinator.device_configs:
+            for datapoint in device_config.get_datapoints_for_platform(target_platform):
 
                 # Create a Sensor, Binary_Sensor, Number, Select, Switch or other entity for this datapoint
                 try:
-                    entity = target_class(self._coordinator, device, datapoint.key)
+                    entity = target_class(self._coordinator, device_config, datapoint.key)
                     entities.append(entity)
 
                     valid_unique_ids.append(entity.unique_id)
 
                 except Exception as  ex:
-                    _LOGGER.warning(f"Could not instantiate {target_platform} entity class for {device.id}:{datapoint.key}. Details: {ex}")
+                    _LOGGER.warning(f"Could not instantiate {target_platform} entity class for {device_config.id}:{datapoint.key}. Details: {ex}")
 
         # Remember valid unique_ids per platform so we can do an entity cleanup later
         self._coordinator.set_valid_unique_ids(target_platform, valid_unique_ids)
