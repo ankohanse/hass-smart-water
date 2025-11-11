@@ -24,12 +24,14 @@ from homeassistant.const import UnitOfVolume
 from homeassistant.const import UnitOfVolumeFlowRate
 from homeassistant.const import UnitOfTemperature
 from homeassistant.const import UnitOfTime
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoreEntity
 
 from .const import (
+    DOMAIN,
     ATTR_DATA_VALUE,
     ATTR_STORED_DATA_VALUE,
-    DOMAIN,
+    PREFIX_ID,
     utcnow,
 )
 from .coordinator import (
@@ -37,6 +39,7 @@ from .coordinator import (
 )
 from .data import (
     SmartWaterData,
+    SmartWaterDeviceConfig,
 )
 
 # Define logger
@@ -46,12 +49,10 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass
 class SmartWaterEntityExtraData(ExtraStoredData):
     """Object to hold extra stored data."""
-
     data_value: Any = None
     
     def as_dict(self) -> dict[str, Any]:
         """Return a dict representation of the sensor data."""
-
         return {
             ATTR_STORED_DATA_VALUE: self.data_value
         }
@@ -59,7 +60,6 @@ class SmartWaterEntityExtraData(ExtraStoredData):
     @classmethod
     def from_dict(cls, restored: dict[str, Any]) -> Self | None:
         """Initialize a stored sensor state from a dict."""
-
         return cls(
             data_value = restored.get(ATTR_STORED_DATA_VALUE)
         )
@@ -71,17 +71,18 @@ class SmartWaterEntity(RestoreEntity):
     (SmartWaterSensor, SmartWaterBinarySensor, ...)
     """
     
-    def __init__(self, coordinator: SmartWaterCoordinator, device: SmartWaterData, key: str):
+    def __init__(self, coordinator: SmartWaterCoordinator, device_config: SmartWaterDeviceConfig, key: str):
 
         self._coordinator = coordinator
-        self._device_id = device.id
+        self._device_id = device_config.id
+        self._device_name = device_config.name
         
         # Remember the static meta parameters for this entity
-        self._datapoint = device.get_datapoint(key)
+        self._datapoint = device_config.get_datapoint(key)
 
         # The unique identifiers for this sensor within Home Assistant
-        self.object_id       = SmartWaterEntity.create_id(DOMAIN, device.id, key)   # Device.id + params.key
-        self._attr_unique_id = SmartWaterEntity.create_id(DOMAIN, device.name, key) # Device.name + params.key
+        self.object_id       = SmartWaterEntity.create_id(PREFIX_ID, self._device_id, key)   # smartwater_<device_id>_<key>
+        self._attr_unique_id = SmartWaterEntity.create_id(PREFIX_ID, self._device_name, key) # smartwater_<device_name>_<key>
 
         self._attr_has_entity_name = True
         self._attr_name = self._datapoint.name
@@ -94,27 +95,20 @@ class SmartWaterEntity(RestoreEntity):
         self._unit = self.get_unit()        # don't apply directly to _attr_unit, some entities don't have it
         self._attr_icon = self.get_icon()
 
-        self._attr_entity_registry_enabled_default = self.get_enabled_default()
+        self._attr_entity_registry_enabled_default = self.get_entity_enabled_default()
         self._attr_entity_category = self.get_entity_category()
+
+        # Link to the device
+        self._attr_device_info = DeviceInfo(
+            identifiers = {(DOMAIN, self._device_id)},
+        )
 
 
     @property
     def suggested_object_id(self) -> str | None:
         """Return input for object id."""
         return self.object_id
-    
-    
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID for use in home assistant."""
-        return self._attr_unique_id
-    
-    
-    @property
-    def name(self) -> str:
-        """Return the name of the entity."""
-        return self._attr_name
-    
+
 
     @property
     def extra_state_attributes(self) -> dict[str, str | list[str]]:
@@ -127,13 +121,13 @@ class SmartWaterEntity(RestoreEntity):
             state_attr[ATTR_DATA_VALUE] = self._data_value
 
         return state_attr        
-    
+
+
     @property
     def extra_restore_state_data(self) -> SmartWaterEntityExtraData | None:
         """
         Return entity specific state data to be restored on next HA run.
         """
-
         return SmartWaterEntityExtraData(
             data_value = self._data_value
         )
@@ -156,7 +150,7 @@ class SmartWaterEntity(RestoreEntity):
         # Get last data from previous HA run                      
         last_state = await self.async_get_last_state()
         last_extra = await self.async_get_last_extra_data()
-        
+
         if last_state and last_extra:
             # Get entity value from restored data
             dict_extra = last_extra.as_dict()
@@ -173,23 +167,14 @@ class SmartWaterEntity(RestoreEntity):
         """
         changed = False
 
-        if self._data_value != data_value:
+        if force or self._data_value != data_value:
+
             self._data_value = data_value
             changed = True
 
         return changed
 
 
-    def get_enabled_default(self):
-        pf = self._datapoint.pf
-        parts = pf.split(';')
-
-        if len(parts) > 1 and parts[1]=='d':
-            return False
-        else:
-            return True
-
-    
     def get_unit(self):
         """Convert from Datapoint unit abbreviation to Home Assistant units"""
         if self._datapoint is None:
@@ -209,14 +194,28 @@ class SmartWaterEntity(RestoreEntity):
                 _LOGGER.warning(f"Encountered a unit or measurement '{self._datapoint.unit}' for '{self._datapoint.fam}:{self._datapoint.key}' that may not be supported by Home Assistant. Please contact the integration developer to have this resolved.")
                 return self._datapoint.unit
     
-    
+        
+    ICONS_TREND_LEVEL = {
+        0:  'mdi:wave',
+        1:  'mdi:wave-arrow-up',
+        2:  'mdi:wave-arrow-up',
+        3:  'mdi:wave-arrow-up', 
+        4:  'mdi:wave-arrow-up',
+        5:  'mdi:wave-arrow-up',
+        -1: 'mdi:wave-arrow-down', 
+        -2: 'mdi:wave-arrow-down',
+        -3: 'mdi:wave-arrow-down', 
+        -4: 'mdi:wave-arrow-down', 
+        -5: 'mdi:wave-arrow-down',
+    }
+
+
     def get_icon(self):
         """Convert from unit to icon"""
-
         match self._datapoint.key:
             case 'battery_level':  return None  # Automatically assigned by HA with battery-low, battery-med or battery-high
             case 'water_level':    return 'mdi:water-percent'
-            case 'trend_level':    return { 'flat':'mdi:waves', 'up':'mdi:waves-arrow-up', 'down': 'mdi:waves-arrow-down' }.get(self._data_value, None)
+            case 'trend_level':    return self.ICONS_TREND_LEVEL.get(self._data_value or 0, None)
 
         match self._datapoint.unit:
             case 'd':       return 'mdi:timer'

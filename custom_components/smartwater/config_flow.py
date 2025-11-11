@@ -19,6 +19,7 @@ from homeassistant.helpers.selector import selector
 from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
+    CONF_DEVICES,
 )
 
 from smartwater import (
@@ -39,6 +40,10 @@ from .coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator,
 )
+from .data import (
+    SmartWaterData,
+    SmartWaterDeviceConfig,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,9 +58,10 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     
     def __init__(self):
         """Initialize config flow."""
-        self._username = None
-        self._password = None
-        self._profile = None
+        self._username: str = None
+        self._password:str = None
+        self._profile: SmartWaterData = None
+        self._devices: dict[str,SmartWaterData] = {}
         self._errors = {}
 
         # Assign the HA configured log level of this module to the aioSmartWater module
@@ -74,15 +80,22 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         coordinator = SmartWaterCoordinatorFactory.create_temp(self._username, self._password)
         try:
             # Call the SmartWaterApi with the detect_device method
-            self._profile = await coordinator.async_config_flow_data()
+            self._profile,self._devices = await coordinator.async_config_flow_data()
             
-            if self._profile is not None:
+            if self._profile is None:
+                self._errors[CONF_USERNAME] = f"No profile detected"
+            
+            elif self._devices is None or len(self._devices)==0:
+                self._errors[CONF_USERNAME] = f"No devices detected"
+
+            else:
                 _LOGGER.info("Successfully connected!")
-                _LOGGER.debug(f"profile {self._profile.id}: {self._profile._data}")
+                _LOGGER.debug(f"profile {self._profile.id}: {self._profile.to_dict()}")
+                for device in self._devices.values():
+                    _LOGGER.debug(f"device {device.id}: {device.to_dict()}")
+
                 self._errors = {}
                 return True
-            else:
-                self._errors[CONF_USERNAME] = f"No profile detected"
         
         except SmartWaterError as e:
             self._errors[CONF_PASSWORD] = f"Failed to connect to Smart Water servers"
@@ -144,6 +157,7 @@ class ConfigFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PROFILE_NAME: self._profile.name,
             },
             options = {
+                CONF_DEVICES: [SmartWaterDeviceConfig.from_data(device_data).to_dict() for device_data in self._devices.values()]
             }
         )
     

@@ -36,7 +36,10 @@ CONF_PROFILE_NAME = "profile_name"
 
 DIAGNOSTICS_REDACT = { CONF_PASSWORD, 'client_secret' }
 
+# To compose entity unique id and names
 MANUFACTURER = "Smart Water Technologies"
+PREFIX_ID = "smartwater"
+PREFIX_NAME = "Smart Water"
 
 # Extra attributes displayed in entity attributes
 ATTR_DATA_VALUE = "smartwater_value"
@@ -51,7 +54,7 @@ BINARY_SENSOR_VALUES_ALL = BINARY_SENSOR_VALUES_ON + BINARY_SENSOR_VALUES_OFF
 API_RETRY_ATTEMPTS = 2
 API_RETRY_DELAY = 5    # seconds
 
-COORDINATOR_POLLING_INTERVAL = 5 * 60   # 5 minutes in seconds
+COORDINATOR_POLLING_INTERVAL = 1*60*60   # 1 hour in seconds
 COORDINATOR_RELOAD_DELAY = 1*60*60 # 1 hour in seconds
 COORDINATOR_RELOAD_DELAY_MAX = 24*60*60 # 24 hours in seconds
 

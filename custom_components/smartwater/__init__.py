@@ -69,12 +69,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # We force to create a fresh instance, otherwise data updates don't happen if this setup_entry was triggered by a reload
     coordinator: SmartWaterCoordinator = SmartWaterCoordinatorFactory.create(hass, config_entry, force_create=True)
     
-    # Fetch initial data so we have data when entities subscribe
-    #
-    # If the refresh fails, async_config_entry_first_refresh will
-    # raise ConfigEntryNotReady and setup will try again later
-    #
-    await coordinator.async_config_entry_first_refresh()
+    # No need to fetch initial data; 
+    # we already have what we need from config_entry plus 
+    # the stored data for each entity from the last HA run
     
     # Create devices
     await coordinator.async_create_devices(config_entry)
@@ -86,16 +83,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     await coordinator.async_cleanup_entities(config_entry)
     await coordinator.async_cleanup_devices(config_entry)
 
+    # Subscribe coordinator to changes in remote data
+    await coordinator.async_subscribe_to_push_data()
+
     # Reload entry when it is updated via config flow
     config_entry.async_on_unload(config_entry.add_update_listener(_async_update_listener))
-
-    # Perform coordinator unload actions when Home Assistant shuts down or config-entry unloads
-    @callback
-    async def _async_coordinator_unload(*_: Any) -> None:
-        await coordinator.async_on_unload()
-    
-    config_entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_CLOSE, _async_coordinator_unload))
-    config_entry.async_on_unload(_async_coordinator_unload)
 
     return True
 

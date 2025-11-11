@@ -22,7 +22,6 @@ from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.exceptions import IntegrationError
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get
 from homeassistant.helpers.event import async_track_time_interval
@@ -37,7 +36,6 @@ from collections import defaultdict
 from collections import namedtuple
 
 from .const import (
-    DOMAIN,
     BINARY_SENSOR_VALUES_ON,
     BINARY_SENSOR_VALUES_OFF,
     STATUS_VALIDITY_PERIOD,
@@ -48,12 +46,12 @@ from .coordinator import (
 )
 from .data import (
     SmartWaterData,
+    SmartWaterDeviceConfig,
 )
 from .entity_base import (
     SmartWaterEntity,
 )
 from .entity_helper import (
-    SmartWaterEntityHelperFactory,
     SmartWaterEntityHelper,
 )
 
@@ -72,8 +70,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry, asyn
     """
     Setting up the adding and updating of binary_sensor entities
     """
-    helper = SmartWaterEntityHelperFactory.create(hass, config_entry)
-    await helper.async_setup_entry(Platform.BINARY_SENSOR, SmartWaterBinarySensor, async_add_entities)
+    await SmartWaterEntityHelper(hass, config_entry).async_setup_entry(Platform.BINARY_SENSOR, SmartWaterBinarySensor, async_add_entities)
 
 
 class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEntity):
@@ -81,13 +78,13 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
     Representation of an entity that is part of a gateway, tank or pump.
     """
 
-    def __init__(self, coordinator: SmartWaterCoordinator, device: SmartWaterData, key: str) -> None:
+    def __init__(self, coordinator: SmartWaterCoordinator, device_config: SmartWaterDeviceConfig, key: str) -> None:
         """ 
         Initialize the sensor. 
         """
 
         CoordinatorEntity.__init__(self, coordinator)
-        SmartWaterEntity.__init__(self, coordinator,  device, key)
+        SmartWaterEntity.__init__(self, coordinator,  device_config, key)
         
         # The unique identifiers for this sensor within Home Assistant
         self.entity_id = ENTITY_ID_FORMAT.format(self._attr_unique_id)   # Device.name + params.key
@@ -97,14 +94,11 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         # update creation-time only attributes
         self._attr_device_class = self.get_binary_sensor_device_class()
 
-        # Link to the device
-        self._attr_device_info = DeviceInfo(
-            identifiers = {(DOMAIN, device.id)},
-        )
-
-        # Create all value related attributes
-        data_value = device.get_value(key)
-        self._update_value(data_value, force=True)
+        # Create all value related attributes (but with unknown value).
+        # After this constructor ends, base class SmartWaterEntity.async_added_to_hass() will 
+        # set the value using the restored value from the last HA run. Or otherwise it will
+        # be set when the first push-data is received.
+        self._update_value(None, force=True)
     
     
     @callback
@@ -114,14 +108,14 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         """
 
         # find the correct device corresponding to this sensor
-        devices:dict[str,SmartWaterData] = self._coordinator.data
+        devices_data:dict[str,SmartWaterData] = self._coordinator.data
 
-        device = devices.get(self._device_id)
-        if device is None:
+        device_data = devices_data.get(self._device_id)
+        if device_data is None:
             return        
 
         # Update value related attributes
-        data_value = device.get_value(self._datapoint.key)
+        data_value = device_data.get_value(self._datapoint.key)
 
         if self._update_value(data_value):
             self.async_write_ha_state()
@@ -131,7 +125,9 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         """
         Set entity value, unit and icon
         """
-        
+        changed = super()._update_value(data_value, force)
+
+        # Convert from SmartWater data value to Home Assistant attributes
         if data_value in BINARY_SENSOR_VALUES_ON:
             is_on = True
         elif data_value in BINARY_SENSOR_VALUES_OFF:
@@ -139,9 +135,7 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         else:
             is_on = None
 
-        # update value if it has changed
-        changed = super()._update_value(data_value, force)
-
+        # Update Home Assistant attributes
         if force or self._attr_is_on != is_on:
             
             self._attr_is_on = is_on
