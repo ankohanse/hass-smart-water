@@ -22,7 +22,7 @@ from homeassistant.const import (
     CONF_DEVICES,
 )
 
-from smartwater import (
+from pysmartwater import (
     SmartWaterError,
     SmartWaterAuthError,
 ) 

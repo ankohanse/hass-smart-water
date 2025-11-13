@@ -12,7 +12,7 @@ from homeassistant.core import callback
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import create_async_httpx_client
 
-from smartwater import (
+from pysmartwater import (
     AsyncSmartWaterApi,
     SmartWaterApiFlag,
     SmartWaterConnectError,

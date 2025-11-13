@@ -7,10 +7,6 @@ from typing import Any
 
 from homeassistant.const import Platform
 
-from smartwater import (
-    SmartWaterDataError,
-)
-
 from .const import (
     PLATFORM_TO_PF,
 )
@@ -94,7 +90,6 @@ DATAPOINTS = [
     DP(fam="d.tank", key="device_voltage",     name="Device Voltage",       pf="sen", flag="d,diag", path="devVoltage",              fmt="f2", unit="V",    opt={}),
     DP(fam="d.tank", key="sensor_status",      name="Sensor Status",        pf="sen", flag="d,diag", path="sensorStatus",            fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="last_report",        name="Last Report",          pf="sen", flag="d,diag", path="lastReport",              fmt="t",  unit="",     opt={}),
-    DP(fam="d.tank", key="last_modified",      name="Last Modified",        pf="sen", flag="d,diag", path="lastModified",            fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_not_receiving",name="Not Receiving Alert",  pf="bin", flag="d,diag", path="alerts.notReceiving",     fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_not_reporting",name="Not Reporting Alert",  pf="bin", flag="d,diag", path="alerts.notReporting",     fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="tank_height",        name="Tank Height",          pf="sen", flag="d,diag", path="settings.height",         fmt="f1", unit="m",    opt={}),
@@ -103,6 +98,7 @@ DATAPOINTS = [
     DP(fam="d.tank", key="clean_tank_at",      name="Clean Tank At",        pf="sen", flag="d,diag", path="settings.cleanTankAt",    fmt="t",  unit="",     opt={}),
 
     # For Device.Tank (not exposed, seem to have internal/unrelevant/never-changing values)
+    DP(fam="d.tank", key="last_modified",      name="Last Modified",        pf=None,  flag="d,diag", path="lastModified",            fmt="t",  unit="",     opt={}),
     DP(fam="d.tank", key="station_rssi",       name="Station RSSI",         pf=None,  flag="d,diag", path="stationRSSI",             fmt="i",  unit="dBm",  opt={}),
     DP(fam="d.tank", key="device_rssi",        name="Device RSSI",          pf=None,  flag="d,diag", path="deviceRSSI",              fmt="i",  unit="dBm",  opt={}),
     DP(fam="d.tank", key="min_level",          name="Min Level",            pf=None,  flag="d,diag", path="minLevel",                fmt="i",  unit="",     opt={}),
@@ -119,7 +115,7 @@ DATAPOINTS = [
 DATAPATHS_EXTRA = {
     '#canEdit':     "$lookup(members, context.profile_id).canEdit",
     '#enabled':     "$lookup(members, context.profile_id).enabled",
-    '#waterHeight': "(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight",
+    '#waterHeight': "(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight", # Or maybe "settings.height * waterLevel / 100.0" ?
 }
 
 class SmartWaterDataFamily(StrEnum):

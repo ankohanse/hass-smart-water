@@ -10,8 +10,8 @@
   "issue_tracker": "https://github.com/ankohanse/hass-smart-water/issues",
   "loggers": ["custom_components.smartwater"],
   "requirements": [
-    "smartwater==0.0.13",
-    "jsonata-python<1.0.0"
+    "pysmartwater==1.0.0",
+    "jsonata-python>=0.2.5,<1.0.0"
   ],
-  "version": "2025.11.1"
+  "version": "2025.11.2"
 }

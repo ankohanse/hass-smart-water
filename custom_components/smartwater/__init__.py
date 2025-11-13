@@ -54,7 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     
     # Assign the HA configured log level of this module to the aiodabpumps module
     log_level: int = _LOGGER.getEffectiveLevel()
-    lib_logger: logging.Logger = logging.getLogger("smartwater")
+    lib_logger: logging.Logger = logging.getLogger("pysmartwater")
     lib_logger.setLevel(log_level)
 
     _LOGGER.info(f"Logging at {logging.getLevelName(log_level)}")
