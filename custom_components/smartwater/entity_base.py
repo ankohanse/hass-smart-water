@@ -136,8 +136,8 @@ class SmartWaterEntity(RestoreEntity):
     @staticmethod
     def create_id(*args):
         str = '_'.join(args).strip('_')
-        str = re.sub(' ', '_', str)
-        str = re.sub('[^a-z0-9_-]+', '', str.lower())
+        str = re.sub('[ -]', '_', str)
+        str = re.sub('[^a-z0-9_]+', '', str.lower())
         return str            
     
     
