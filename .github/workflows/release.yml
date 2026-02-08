@@ -16,7 +16,7 @@ jobs:
 
       - name: Create Zip
         run: |
-          zip -r smartwater.zip ./custom_components/smartwater"
+          zip -r smartwater.zip ./custom_components/smartwater/
 
       - name: Upload Zip to Release
         uses: softprops/action-gh-release@v2.2.1
