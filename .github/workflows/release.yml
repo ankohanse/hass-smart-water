@@ -1,40 +1,26 @@
-name: "Zip Release"
+name: Zip Release
 
 on:
   release:
-    types:
-      - created
+    types: [published]
 
 jobs:
-  build:
+  release:
+    name: SmartWater release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Create Zip
         run: |
-          # Zip the custom component folder (adjust path if needed)
-          zip -r "smartwater.zip" custom_components/smartwater/
+          zip -r smartwater.zip ./custom_components/smartwater"
 
-      - name: Get release upload URL
-        id: create-new-release
-        uses: actions/create-release@v1
+      - name: Upload Zip to Release
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          files: smartwater.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-      
-      - name: Upload Release Asset
-        id: upload-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create-new-release.outputs.upload_url }}
-          asset_path: ./smartwater.zip
-          asset_name: smartwater.zip
-          asset_content_type: application/zip
