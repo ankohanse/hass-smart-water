@@ -71,10 +71,10 @@ DATAPOINTS = [
 
     # For Device.Tank
     DP(fam="d.tank", key="water_level",        name="Water Level",          pf="sen", flag="e,none", path="waterLevel",              fmt="i",  unit="%",    opt={}),
-    DP(fam="d.tank", key="water_height",       name="Water Height",         pf="sen", flag="e,none", path="#waterHeight",            fmt="f1", unit="m",    opt={}),
+    DP(fam="d.tank", key="water_height",       name="Water Height",         pf="sen", flag="e,none", path="#waterHeight",            fmt="f2", unit="m",    opt={}),
     DP(fam="d.tank", key="trend_level",        name="Trend Level",          pf="sen", flag="e,none", path="trendLevel",              fmt="e",  unit="",     opt=OPT_TREND_LEVEL),
     DP(fam="d.tank", key="days_remaining",     name="Days remaining",       pf="sen", flag="e,none", path="daysRemaining",           fmt="i",  unit="d",    opt={}),
-    DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="e,none", path="avgDailyUse",             fmt="f2", unit="%",    opt={}),
+    DP(fam="d.tank", key="avg_daily_use",      name="Avg Daily Use",        pf="sen", flag="e,none", path="avgDailyUse",             fmt="f1", unit="%",    opt={}),
     DP(fam="d.tank", key="battery_level",      name="Battery Level",        pf="sen", flag="e,diag", path="batteryLevel",            fmt="i",  unit="%",    opt={}),
     DP(fam="d.tank", key="alert_level_low",    name="Low Level Alert",      pf="bin", flag="e,diag", path="alerts.lowLevelAlert",    fmt="b",  unit="",     opt={}),
     DP(fam="d.tank", key="alert_level_high",   name="High Level Alert",     pf="bin", flag="e,diag", path="alerts.highLevelAlert",   fmt="b",  unit="",     opt={}),
@@ -115,7 +115,7 @@ DATAPOINTS = [
 DATAPATHS_EXTRA = {
     '#canEdit':     "$lookup(members, context.profile_id).canEdit",
     '#enabled':     "$lookup(members, context.profile_id).enabled",
-    '#waterHeight': "(settings.height - settings.outflowHeight) * waterLevel / 100.0 + settings.outflowHeight", # Or maybe "settings.height * waterLevel / 100.0" ?
+    '#waterHeight': "settings.height * waterLevel / 100.0",
 }
 
 class SmartWaterDataFamily(StrEnum):
