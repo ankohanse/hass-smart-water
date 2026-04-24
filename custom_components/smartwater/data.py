@@ -63,6 +63,7 @@ DATAPOINTS = [
     DP(fam="gw",     key="use_v2_resync",      name="Use V2 Resync",        pf=None,  flag="d,diag", path="useV2Resync",             fmt="b",  unit="",     opt={}),
 
     # For Device (generic)
+    DP(fam="d",      key="name",               name="Name",                 pf=None,  flag="",       path="settings.name",           fmt="s",  unit="",     opt={}),
     DP(fam="d",      key="serial",             name="Serial",               pf=None,  flag="",       path="serialNumber",            fmt="s",  unit="",     opt={}),
     DP(fam="d",      key="version",            name="Version",              pf=None,  flag="",       path="version",                 fmt="s",  unit="",     opt={}),
     DP(fam="d",      key="gateway_id",         name="Gateway Id",           pf=None,  flag="",       path="gatewayId",               fmt="s",  unit="",     opt={}),
@@ -110,6 +111,23 @@ DATAPOINTS = [
     DP(fam="d.tank", key="fluid_density",      name="Fluid Density",        pf=None,  flag="d,diag", path="settings.fluidDensity",   fmt="f2", unit="",     opt={}),
     DP(fam="d.tank", key="adc_value",          name="Adc Value",            pf=None,  flag="d,diag", path="adcValue",                fmt="i",  unit="",     opt={}),
     DP(fam="d.tank", key="battery_adc",        name="Battery Adc",          pf=None,  flag="d,diag", path="batteryADC",              fmt="i",  unit="",     opt={}),
+
+    # For Device.Pump
+    DP(fam="d.pump", key="started_at",         name="Started At",                pf="sen", flag="e,diag", path="startedAt",                      fmt="t",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_start_blocked",name="Auto Start Blocked Alert",  pf="bin", flag="e,diag", path="alerts.autoStartBlocked",        fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_forced_stop",  name="Forced Stop Alert",         pf="bin", flag="e,diag", path="alerts.forcedStop",              fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_days_low",     name="Communication Error Alert", pf="bin", flag="e,diag", path="alerts.communicationError",      fmt="b",  unit="",     opt={}),
+
+    # For Device.Pump (default disabled entity)
+    DP(fam="d.pump", key="pump_mode",          name="Pump Mode",                 pf="sen", flag="d,diag", path="settings.pumpMode",              fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="src",                name="Source",                    pf="sen", flag="d,diag", path="settings.source.value",          fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="dst",                name="Destination",               pf="sen", flag="d,diag", path="settings.destination.value",     fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_time_from", name="Source Stop Time From",     pf="sen", flag="d,diag", path="settings.sourceTankStopTimeFrom",fmt="i",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_time_to",   name="Source Stop Time To",       pf="sen", flag="d,diag", path="settings.sourceTankStopTimeTo",  fmt="i",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_level",     name="Source Stop Level",         pf="sen", flag="d,diag", path="settings.sourceTankStopLevel",   fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="dst_stop_level",     name="Destination Stop Level",    pf="sen", flag="d,diag", path="settings.destination.value",     fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="dst_start_level",    name="Destination Start Level",   pf="sen", flag="d,diag", path="settings.pumpAutoStartLevel",    fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="pump_runtime",       name="Pump Run Time",             pf="sen", flag="d,diag", path="settings.pumpRuntime",           fmt="i",  unit="",    opt={}),
 ]
 
 DATAPATHS_EXTRA = {
@@ -152,7 +170,8 @@ class SmartWaterDatapoint(DP):
     @staticmethod
     def for_family_and_key(family_sub: str, key: str) -> 'SmartWaterDatapoint':
 
-        return next( (SmartWaterDatapoint(dp) for dp in DATAPOINTS if family_sub.startswith(dp.fam) and dp.key==key), None )
+        # Loop over reversed list to make sure we use the longest family_sub match
+        return next( (SmartWaterDatapoint(dp) for dp in reversed(DATAPOINTS) if family_sub.startswith(dp.fam) and dp.key==key), None )
 
 
     @staticmethod

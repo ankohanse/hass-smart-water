@@ -14,6 +14,7 @@ from homeassistant.helpers.httpx_client import create_async_httpx_client
 
 from pysmartwater import (
     AsyncSmartWaterApi,
+    SmartWaterApiContext,
     SmartWaterApiFlag,
     SmartWaterConnectError,
     SmartWaterAuthError,
@@ -125,11 +126,12 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         client: httpx.AsyncClient = create_async_httpx_client(hass) 
         
         # Initialize the actual api
+        context = SmartWaterApiContext.SMARTWATER
         flags = {
             SmartWaterApiFlag.REFRESH_HANDLER_START: True if not is_temp else False,
             SmartWaterApiFlag.DIAGNOSTICS_COLLECT: True
         } 
-        super().__init__(username, password, client=client, flags=flags)
+        super().__init__(username, password, client=client, context=context, flags=flags)
 
         # Data properties
         self.profile: SmartWaterData = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id="", dict={}, context={})

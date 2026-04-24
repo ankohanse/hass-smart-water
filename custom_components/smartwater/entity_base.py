@@ -217,6 +217,9 @@ class SmartWaterEntity(RestoreEntity):
             case 'water_level':    return 'mdi:water-percent'
             case 'trend_level':    return self.ICONS_TREND_LEVEL.get(self._data_value or 0, None)
 
+        match self._datapoint.fmt:
+            case 't':       return 'mdi:clock'
+ 
         match self._datapoint.unit:
             case 'd':       return 'mdi:timer'
             case 'month':   return 'mdi:calendar-clock'
