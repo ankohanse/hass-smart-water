@@ -5,8 +5,12 @@ import logging
 from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
+    Platform,
 )
-from homeassistant.const import Platform
+
+from pysmartwater import (
+    SmartWaterApiContext,
+)
 
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -16,13 +20,6 @@ _LOGGER: logging.Logger = logging.getLogger(__package__)
 DOMAIN = "smartwater"
 NAME = "Smart Water"
 ISSUE_URL = "https://github.com/ankohanse/hass-smartwater/issues"
-
-# Map platform to pf codes for both enabled and disabled entities
-PLATFORM_TO_PF: dict[Platform, str] = {
-    Platform.SENSOR:        "sen",
-    Platform.BINARY_SENSOR: "bin",
-}
-PLATFORMS = list(PLATFORM_TO_PF.keys())
 
 HUB = "Hub"
 API = "Api"
@@ -51,6 +48,7 @@ BINARY_SENSOR_VALUES_ON = [True, 1, '1']
 BINARY_SENSOR_VALUES_OFF = [False, 0, '0']
 BINARY_SENSOR_VALUES_ALL = BINARY_SENSOR_VALUES_ON + BINARY_SENSOR_VALUES_OFF
 
+API_CONTEXT = SmartWaterApiContext.SMARTWATER
 API_RETRY_ATTEMPTS = 2
 API_RETRY_DELAY = 5    # seconds
 

@@ -1,3 +1,9 @@
+"""
+Helper class for Smart Water and Gallagher Water integrations.
+
+Note that this file is shared as is between the two integrations. 
+Do not place code that is specific to only one of these integration in here!
+"""
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -7,10 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 import homeassistant.helpers.entity_registry as entity_registry
 
-from .const import (
-    PLATFORMS,
-    BINARY_SENSOR_VALUES_ALL,
-)
 from .coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator

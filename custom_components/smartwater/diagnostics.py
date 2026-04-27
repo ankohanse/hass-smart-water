@@ -1,4 +1,9 @@
-"""Provides diagnostics for custom component."""
+"""
+Provides diagnostics for custom component.
+
+Note that this file is shared as is between the two integrations. 
+Do not place code that is specific to only one of these integration in here!
+"""
 
 import logging
 
@@ -12,7 +17,7 @@ from homeassistant.components.diagnostics.util import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import (
+from ..const import (
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     DIAGNOSTICS_REDACT,

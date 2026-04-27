@@ -20,16 +20,18 @@ from homeassistant.helpers.translation import async_get_translations
 from homeassistant.const import (
     CONF_USERNAME,
 )
-from .coordinator import (
-    SmartWaterCoordinatorFactory,
-    SmartWaterCoordinator
-)
 
 from .const import (
     DOMAIN,
-    PLATFORMS,
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
+)
+from .shared.coordinator import (
+    SmartWaterCoordinatorFactory,
+    SmartWaterCoordinator
+)
+from .shared.data import (
+    PLATFORMS,
 )
 
 

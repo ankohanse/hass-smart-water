@@ -1,3 +1,10 @@
+"""
+Coordinator for Smart Water and Gallagher Water integrations.
+
+Note that this file is shared as is between the two integrations. 
+Do not place code that is specific to only one of these integration in here!
+"""
+
 import logging
 
 from datetime import datetime, timedelta
@@ -21,7 +28,7 @@ from homeassistant.const import (
     CONF_DEVICES,
 )
 
-from .const import (
+from ..const import (
     DOMAIN,
     NAME,
     COORDINATOR,
@@ -40,8 +47,6 @@ from .api import (
 )
 from .data import (
     SmartWaterData,
-    SmartWaterDataFamily,
-    SmartWaterDataKey,
     SmartWaterDeviceConfig,
 )
 

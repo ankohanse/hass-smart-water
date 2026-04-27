@@ -36,11 +36,11 @@ from .const import (
     CONF_PROFILE_NAME,
 )
 
-from .coordinator import (
+from .shared.coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator,
 )
-from .data import (
+from .shared.data import (
     SmartWaterData,
     SmartWaterDeviceConfig,
 )
