@@ -2,19 +2,11 @@
 from __future__ import annotations
 
 import logging
-import re
-from typing import Any
 
 import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
 
-from homeassistant import config_entries, exceptions
-
-from homeassistant.core import HomeAssistant, callback
+from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.exceptions import IntegrationError
-from homeassistant.helpers.selector import selector
 
 from homeassistant.const import (
     CONF_USERNAME,
@@ -27,7 +19,6 @@ from pysmartwater import (
     SmartWaterAuthError,
 ) 
 
-
 from .const import (
     DOMAIN,
     DEFAULT_USERNAME,
@@ -35,7 +26,6 @@ from .const import (
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
 )
-
 from .shared.coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator,

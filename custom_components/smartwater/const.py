@@ -5,7 +5,6 @@ import logging
 from homeassistant.const import (
     CONF_USERNAME,
     CONF_PASSWORD,
-    Platform,
 )
 
 from pysmartwater import (

@@ -1,25 +1,14 @@
 """__init__.py: The DAB Pumps integration."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
-import json
-from typing import Any
-import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigType
-from homeassistant.const import Platform
 from homeassistant.const import EVENT_HOMEASSISTANT_CLOSE
 from homeassistant.core import HomeAssistant
-from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.translation import async_get_translations
-
-from homeassistant.const import (
-    CONF_USERNAME,
-)
 
 from .const import (
     DOMAIN,

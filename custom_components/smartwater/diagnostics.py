@@ -17,12 +17,12 @@ from homeassistant.components.diagnostics.util import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from ..const import (
+from .const import (
     CONF_PROFILE_ID,
     CONF_PROFILE_NAME,
     DIAGNOSTICS_REDACT,
 )
-from .coordinator import (
+from .shared.coordinator import (
     SmartWaterCoordinatorFactory,
     SmartWaterCoordinator,
 )
