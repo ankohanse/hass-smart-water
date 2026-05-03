@@ -123,21 +123,26 @@ DATAPOINTS = [
     DP(fam="d.tank", key="battery_adc",        name="Battery Adc",          pf=None,  flag="d,diag", path="batteryADC",              fmt="i",  unit="",     opt={}),
 
     # For Device.Pump
-    DP(fam="d.pump", key="started_at",         name="Started At",                pf="sen", flag="e,diag", path="startedAt",                      fmt="t",  unit="",     opt={}),
-    DP(fam="d.pump", key="alert_start_blocked",name="Auto Start Blocked Alert",  pf="bin", flag="e,diag", path="alerts.autoStartBlocked",        fmt="b",  unit="",     opt={}),
-    DP(fam="d.pump", key="alert_forced_stop",  name="Forced Stop Alert",         pf="bin", flag="e,diag", path="alerts.forcedStop",              fmt="b",  unit="",     opt={}),
-    DP(fam="d.pump", key="alert_days_low",     name="Communication Error Alert", pf="bin", flag="e,diag", path="alerts.communicationError",      fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="started_at",         name="Started At",                pf="sen", flag="e,diag", path="startedAt",                        fmt="t",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_start_blocked",name="Auto Start Blocked Alert",  pf="bin", flag="e,diag", path="alerts.autoStartBlocked",          fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_forced_stop",  name="Forced Stop Alert",         pf="bin", flag="e,diag", path="alerts.forcedStop",                fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="alert_days_low",     name="Communication Error Alert", pf="bin", flag="e,diag", path="alerts.communicationError",        fmt="b",  unit="",     opt={}),
+    DP(fam="d.pump", key="leak_warning",       name="Leak Warning Alert",        pf="bin", flag="e,diag", path="alerts.leakWarning",               fmt="b",  unit="",     opt={}),
 
     # For Device.Pump (default disabled entity)
-    DP(fam="d.pump", key="pump_mode",          name="Pump Mode",                 pf="sen", flag="d,diag", path="settings.pumpMode",              fmt="s",  unit="",    opt={}),
-    DP(fam="d.pump", key="src",                name="Source",                    pf="sen", flag="d,diag", path="settings.source.value",          fmt="s",  unit="",    opt={}),
-    DP(fam="d.pump", key="dst",                name="Destination",               pf="sen", flag="d,diag", path="settings.destination.value",     fmt="s",  unit="",    opt={}),
-    DP(fam="d.pump", key="src_stop_time_from", name="Source Stop Time From",     pf="sen", flag="d,diag", path="settings.sourceTankStopTimeFrom",fmt="i",  unit="",    opt={}),
-    DP(fam="d.pump", key="src_stop_time_to",   name="Source Stop Time To",       pf="sen", flag="d,diag", path="settings.sourceTankStopTimeTo",  fmt="i",  unit="",    opt={}),
-    DP(fam="d.pump", key="src_stop_level",     name="Source Stop Level",         pf="sen", flag="d,diag", path="settings.sourceTankStopLevel",   fmt="i",  unit="%",   opt={}),
-    DP(fam="d.pump", key="dst_stop_level",     name="Destination Stop Level",    pf="sen", flag="d,diag", path="settings.destination.value",     fmt="i",  unit="%",   opt={}),
-    DP(fam="d.pump", key="dst_start_level",    name="Destination Start Level",   pf="sen", flag="d,diag", path="settings.pumpAutoStartLevel",    fmt="i",  unit="%",   opt={}),
-    DP(fam="d.pump", key="pump_runtime",       name="Pump Run Time",             pf="sen", flag="d,diag", path="settings.pumpRuntime",           fmt="i",  unit="",    opt={}),
+    DP(fam="d.pump", key="device_number",      name="Device Number",             pf="sen", flag="d,diag", path="deviceNumber",            fmt="s",  unit="",     opt={}),
+    DP(fam="d.pump", key="pump_mode",          name="Pump Mode",                 pf="sen", flag="d,diag", path="settings.pumpMode",                fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="src",                name="Source Tank",               pf="sen", flag="d,diag", path="settings.sourceTank",              fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="dst",                name="Destination Tank",          pf="sen", flag="d,diag", path="settings.destinationTank",         fmt="s",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_time_from", name="Source Stop Time From",     pf="sen", flag="d,diag", path="settings.sourceTankStopTimeFrom",  fmt="i",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_time_to",   name="Source Stop Time To",       pf="sen", flag="d,diag", path="settings.sourceTankStopTimeTo",    fmt="i",  unit="",    opt={}),
+    DP(fam="d.pump", key="src_stop_level",     name="Source Stop Level",         pf="sen", flag="d,diag", path="settings.sourceTankStopLevel",     fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="dst_stop_level",     name="Destination Stop Level",    pf="sen", flag="d,diag", path="settings.destinationTankStopLevel",fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="dst_start_level",    name="Destination Start Level",   pf="sen", flag="d,diag", path="settings.pumpAutoStartLevel",      fmt="i",  unit="%",   opt={}),
+    DP(fam="d.pump", key="pump_runtime",       name="Pump Run Time",             pf="sen", flag="d,diag", path="settings.pumpRuntime",             fmt="i",  unit="",    opt={}),
+
+    # For Device.Pump (not exposed, seem to have internal/unrelevant/never-changing values)
+    DP(fam="d.pump", key="signal_level",       name="Signal Level",              pf=None,  flag="d,diag", path="signalLevel",                      fmt="t",  unit="",     opt={}),
 ]
 
 DATAPATHS_EXTRA = {
@@ -160,6 +165,7 @@ class SmartWaterDataKey(StrEnum):
     SERIAL = "serial"
     VERSION = "version"
     GATEWAY_ID = "gateway_id"
+    DEVICE_NUMBER = "device_number"
 
 
 class SmartWaterDatapoint(DP):
@@ -205,6 +211,7 @@ class SmartWaterData:
         self._id = id
         self._name = None
         self._type = None
+        self._device_number = None
         
         self._dict = dict
         if context is not None:
@@ -213,6 +220,7 @@ class SmartWaterData:
         # Get derived properties from dict; this may overwrite earlier initial values
         self._name = self.get_value(SmartWaterDataKey.NAME)
         self._type = self.get_value(SmartWaterDataKey.TYPE)
+        self._device_number = self.get_value(SmartWaterDataKey.DEVICE_NUMBER)
 
 
     @property
@@ -229,7 +237,17 @@ class SmartWaterData:
             
     @property
     def name(self):
-        return self._name or self._type or self._id
+        if self._name:
+            return self._name
+        
+        elif self._type and self._device_number:
+            return f"{self._type} {self._device_number}"
+        
+        elif self._type and self._family in [SmartWaterDataFamily.GATEWAY]:
+            return self._type
+        
+        else:
+            return self._id
     
     @property
     def type(self):
@@ -274,6 +292,7 @@ class SmartWaterDeviceConfig():
     type: str
     serial: str
     version: str
+    device_number: str
     gateway_id: str
 
 
@@ -287,6 +306,7 @@ class SmartWaterDeviceConfig():
             type = data.type,
             serial = data.get_value(SmartWaterDataKey.SERIAL) or data.id,
             version = data.get_value(SmartWaterDataKey.VERSION),
+            device_number = data.get_value(SmartWaterDataKey.DEVICE_NUMBER),
             gateway_id = data.get_value(SmartWaterDataKey.GATEWAY_ID)
         )    
             
@@ -309,6 +329,7 @@ class SmartWaterDeviceConfig():
             "type": self.type,
             "serial": self.serial,
             "version": self.version,
+            "device_number": self.device_number,
             "gateway_id": self.gateway_id,
         }
         return {k:v for k,v in result.items() if v is not None}
@@ -318,12 +339,13 @@ class SmartWaterDeviceConfig():
     def from_dict(d: dict[str,Any]) -> 'SmartWaterDeviceConfig':
         """Construct a new SmartWaterDeviceConfig object from a dict"""
         return SmartWaterDeviceConfig(
-            family     = d.get("family", ""),
-            family_sub = d.get("family_sub", ""),
-            id         = d.get("id", None),
-            name       = d.get("name", None),
-            type       = d.get("type", None),
-            serial     = d.get("serial", None),
-            version    = d.get("version", None),
-            gateway_id = d.get("gateway_id", None),
+            family        = d.get("family", ""),
+            family_sub    = d.get("family_sub", ""),
+            id            = d.get("id", None),
+            name          = d.get("name", None),
+            type          = d.get("type", None),
+            serial        = d.get("serial", None),
+            version       = d.get("version", None),
+            device_number = d.get("device_number", None),
+            gateway_id    = d.get("gateway_id", None),
         )
