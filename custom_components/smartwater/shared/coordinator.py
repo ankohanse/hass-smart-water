@@ -356,12 +356,13 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
 
         # Deliberately delay reload checks to prevent enless reloads if something is wrong
         if (utcnow() - self._reload_time).total_seconds() < self._reload_delay:
+            _LOGGER.debug(f"Waiting for delay of {self._reload_delay} seconds to lapse since {self._reload_time}")
             return
 
         # Update the existing entity_config with what is possibly new values
-        data = self._config_entry.data
-        options = self._config_entry.options
-
+        data = dict(self._config_entry.data)
+        options = dict(self._config_entry.options)
+        
         if await self._async_detect_profile_changes():
             data[CONF_PROFILE_NAME] = self._api.profile.name
 
@@ -379,11 +380,13 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         Detect any relevant changes in the profile. 
         Returns True if a reload needs to be triggered else False
         """
+        changed = False
+
         if self._profile_name != self._api.profile.name:
             _LOGGER.info(f"Found change in profile name from '{self._profile_name}' to '{self._api.profile.name}'. Trigger reload of integration.")
-            return True
+            changed = True
         
-        return False
+        return changed
 
         
     async def _async_detect_devices_changes(self)  -> bool:
@@ -391,6 +394,7 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         Detect any new devices. 
         Returns True if a reload needs to be triggered else False
         """
+        changed = False
 
         # Get list of device serials in HA device registry and as retrieved from Api
         api_ids: set[str] = set(self._api.devices.keys())
@@ -398,14 +402,22 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
         new_ids: set[str] = api_ids - old_ids
 
         # Log any newly found gateways or devices
-        if len(new_ids) > 0:
-            for new_id in new_ids:
-                device = self._api.devices.get(new_id)
-                _LOGGER.info(f"Found newly added {device.type} {device.id} ({device.name}) for profile '{self._profile_name}'. Trigger reload of integration.")
-       
-            return True
+        for new_id in new_ids:
+            device = self._api.devices.get(new_id)
+            _LOGGER.info(f"Found newly added {device.type} {device.id} ({device.name}) for profile '{self._profile_name}'. Trigger reload of integration.")
+            changed = True
+        
+        # Log any changes in existing gateways or devices
+        for id in api_ids:
+            device = self._api.devices.get(id)
+            api_config = SmartWaterDeviceConfig.from_data(device)
+            old_config = next( (d for d in self.device_configs if d.id==id), None)
 
-        return False
+            if api_config != old_config:
+                _LOGGER.info(f"Found changed {device.type} {device.id} ({device.name}) for profile '{self._profile_name}'. Trigger reload of integration.")
+                changed = True
+
+        return changed
 
 
     async def async_get_diagnostics(self) -> dict[str, Any]:
