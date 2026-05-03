@@ -13,5 +13,5 @@
     "pysmartwater>=1.1.1,<2.0.0",
     "jsonata-python>=0.2.5,<1.0.0"
   ],
-  "version": "2026.05.1"
+  "version": "2026.05.2"
 }

@@ -1,7 +1,6 @@
 [![version](https://img.shields.io/github/v/release/ankohanse/hass-smart-water?style=for-the-badge)](https://github.com/ankohanse/hass-smart-water)
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-blue.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 [![maintained](https://img.shields.io/maintenance/yes/2026?style=for-the-badge)](https://github.com/ankohanse/hass-smart-water)
-[![usage](https://img.shields.io/github/downloads/ankohanse/hass-smart-water/total.svg?style=for-the-badge)](https://github.com/ankohanse/hass-smart-water)<br/>
 [![license](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://github.com/ankohanse/hass-smart-water/blob/main/LICENSE)
 [![buy_me_a_coffee](https://img.shields.io/badge/If%20you%20like%20it-Buy%20me%20a%20coffee-yellow.svg?style=for-the-badge)](https://www.buymeacoffee.com/ankohanse)
 
@@ -33,33 +32,10 @@ This custom integration is available via HACS (Home Assistant Community Store).
 5. Follow the UI based [Configuration](#configuration)
 
 ## Manual install
-1. Under the `<config directory>/custom_components/` directory create a directory called `smartwater`. 
-Copying all files in `/custom_components/smartwater/` folder from this repo into the new `<config directory>/custom_components/smartwater/` directory you just created.
-
-    This is how your custom_components directory should look like:
-
-    ```bash
-    custom_components
-    ├── smartwater
-    │   ├── translations
-    │   │   └── en.json
-    │   ├── __init__.py
-    │   ├── api.py
-    │   ├── binary_sensor.py
-    │   ├── config_flow.py
-    │   ├── const.py
-    │   ├── coordinator.py
-    │   ├── data.py
-    │   ├── diagnostics.py
-    │   ├── entity_base.py
-    │   ├── entity_helper.py
-    │   ├── manifest.json
-    │   ├── sensor.py
-    │   └── strings.json  
-    ```
-
-2. Restart Home Assistant.
-3. Follow the UI based [Configuration](#configuration)
+1. Under the `<config directory>/custom_components/` directory create a directory called `smartwater`.
+2. Copy all files and subfolders within `smartwater.zip` into the new `<config directory>/custom_components/smartwater/` directory you just created.
+3. Restart Home Assistant.
+4. Follow the UI based [Configuration](#configuration)
 
 # Configuration
 To start the setup of this custom integration:
