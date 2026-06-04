@@ -60,8 +60,6 @@ class SmartWaterBinarySensor(CoordinatorEntity, BinarySensorEntity, SmartWaterEn
         # The unique identifiers for this sensor within Home Assistant
         self.entity_id = ENTITY_ID_FORMAT.format(self._attr_unique_id)   # Device.name + params.key
 
-        _LOGGER.debug(f"Create entity '{self.entity_id}'")
-        
         # update creation-time only attributes
         self._attr_device_class = self.get_binary_sensor_device_class()
 

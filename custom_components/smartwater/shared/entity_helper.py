@@ -60,7 +60,6 @@ class SmartWaterEntityHelper:
         self._coordinator.set_valid_unique_ids(target_platform, valid_unique_ids)
 
         # Now add the entities to the entity_registry
-        _LOGGER.info(f"Add {len(entities)} {target_platform} entities for profile '{self._coordinator.profile_name}'")
         if entities:
             async_add_entities(entities)
 

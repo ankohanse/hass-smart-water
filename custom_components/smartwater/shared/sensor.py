@@ -54,8 +54,6 @@ class SmartWaterSensor(CoordinatorEntity, SensorEntity, SmartWaterEntity):
         # The unique identifiers for this sensor within Home Assistant
         self.entity_id = ENTITY_ID_FORMAT.format(self._attr_unique_id)   # Domain + Device.name + params.key
        
-        _LOGGER.debug(f"Create entity '{self.entity_id}'")
-        
         # update creation-time only attributes that are specific to class Sensor
         self._attr_state_class = self.get_sensor_state_class()
         self._attr_device_class = self.get_sensor_device_class() 
