@@ -261,7 +261,7 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
                 manufacturer =  MANUFACTURER,
                 model = device.type,
                 serial_number = device.serial,
-                hw_version = device.version,
+                hw_version = str(device.version) if device.version is not None else None,
                 via_device = (DOMAIN, device.gateway_id) if device.gateway_id is not None else None,
             )
             valid_ids.append( (DOMAIN, device.id) )
