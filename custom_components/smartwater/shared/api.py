@@ -123,14 +123,13 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         self._password = password
         self.is_temp = is_temp
 
-
         # Create a fresh http client
         client: httpx.AsyncClient = create_async_httpx_client(hass) 
         
         # Initialize the actual api
         context = API_CONTEXT
         flags = {
-            SmartWaterApiFlag.REFRESH_HANDLER_START: True if not is_temp else False,
+            SmartWaterApiFlag.WATCHDOG_START: True if not is_temp else False,
             SmartWaterApiFlag.DIAGNOSTICS_COLLECT: True
         } 
         super().__init__(username, password, client=client, context=context, flags=flags)
@@ -177,7 +176,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         """
         profile_dict = await super().fetch_profile()
 
-        await self._async_on_profile_change(profile_id, profile_dict)
+        await self._async_on_profile_change(profile_id, profile_dict, from_poll=True)
 
 
     async def _async_poll_profile_devices(self, profile_id:str):
@@ -191,14 +190,14 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
         gateway_dicts = await super().fetch_gateways()
 
         for gateway_id,gateway_dict in gateway_dicts.items():
-            await self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_dict)
+            await self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_dict, from_poll=True)
             new_device_ids.add(gateway_id)
 
             # Fetch all devices for this gateway
             gw_device_dicts = await super().fetch_devices(gateway_id)
 
             for device_id,device_dict in gw_device_dicts.items():
-                await self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_dict)
+                await self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_dict, from_poll=True)
                 new_device_ids.add(device_id)
 
         # Cleanup - remove any old devices that we don't see anymore
@@ -227,15 +226,15 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             _LOGGER.info(f"{e}")
 
 
-    def _on_profile_change(self, profile_id: str, profile_dict: dict):
+    def _on_profile_change(self, profile_id: str, profile_dict: dict, from_poll: bool = False):
         """
         AsyncSmartWaterApi.on_profile() needs a sync callback function.
         We jump back into the async event loop here.
         """
-        self._hass.create_task(self._async_on_profile_change(profile_id, profile_dict))
+        self._hass.create_task(self._async_on_profile_change(profile_id, profile_dict, from_poll))
 
 
-    async def _async_on_profile_change(self, profile_id: str, profile_dict: dict):
+    async def _async_on_profile_change(self, profile_id: str, profile_dict: dict, from_poll: bool = False):
         """Handle updated profile received from the remote servers"""
         try:
             context = {
@@ -243,7 +242,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             }
             self.profile = SmartWaterData(family=SmartWaterDataFamily.PROFILE, id=profile_id, dict=profile_dict, context=context)
 
-            _LOGGER.info(f"Received profile data for {self._username} ({profile_id})")
+            _LOGGER.info(f"{'Fetched' if from_poll else 'Received'} profile data for {self._username} ({profile_id})")
 
             # Signal to the coordinator that there were changes in the api data
             if self._async_data_listener is not None:
@@ -253,23 +252,23 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             _LOGGER.info(f"{e}")
 
 
-    def _on_gateway_change(self, gateway_id: str, gateway_dict: dict):
+    def _on_gateway_change(self, gateway_id: str, gateway_dict: dict, from_poll: bool = False):
         """
         AsyncSmartWaterApi.on_gateway() needs a sync callback function.
         We jump back into the async event loop here.
         """
-        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_dict))
+        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.GATEWAY, gateway_id, gateway_dict, from_poll))
         
 
-    def _on_device_change(self, device_id: str, device_dict: dict):
+    def _on_device_change(self, device_id: str, device_dict: dict, from_poll: bool = False):
         """
         AsyncSmartWaterApi.on_device() needs a sync callback function.
         We jump back into the async event loop here.
         """
-        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_dict))
+        self._hass.create_task(self._async_on_device_change(SmartWaterDataFamily.DEVICE, device_id, device_dict, from_poll))
         
 
-    async def _async_on_device_change(self, device_family, device_id: str, device_dict: dict):
+    async def _async_on_device_change(self, device_family, device_id: str, device_dict: dict, from_poll: bool = False):
         """Handle updated device (gateway, tank or pump) received from the remote servers"""
         try:
             context = {
@@ -277,7 +276,7 @@ class SmartWaterApiWrap(AsyncSmartWaterApi):
             }
             device = SmartWaterData(family=device_family, id=device_id, dict=device_dict, context=context) 
         
-            _LOGGER.info(f"Received device data for {device.name} ({device.id})")
+            _LOGGER.info(f"{'Fetched' if from_poll else 'Received'} device data for {device.name} ({device.id})")
             self.devices[device.id] = device
 
             # Signal to the coordinator that there were changes in the api data
