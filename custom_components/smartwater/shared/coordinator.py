@@ -249,12 +249,16 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
 
         _LOGGER.info(f"Create devices for profile '{self._profile_name}'")
         dr: DeviceRegistry = device_registry.async_get(self.hass)
-        valid_ids: list[tuple[str,str]] = []
+        valid_ids: tuple[str,str] = []
+        device_entry_ids: dict[str,str] = {}
 
-        for device in self._device_configs:
+        # Get all devices, make sure gateways are in front of dependent tanks and pumps
+        devices = [d for d in self._device_configs]
+        devices.sort(key=lambda dc: (dc.gateway_id is not None, dc.gateway_id))
+        for device in devices:
             _LOGGER.debug(f"Create device {device.id} ({device.name}) for profile '{self._profile_name}'")
- 
-            dr.async_get_or_create(
+
+            device_entry = dr.async_get_or_create(
                 config_entry_id = config_entry.entry_id,
                 identifiers = {(DOMAIN, device.id)},
                 name = f"{PREFIX_NAME} {device.name}",
@@ -262,9 +266,10 @@ class SmartWaterCoordinator(DataUpdateCoordinator[dict[str,SmartWaterData]]):
                 model = device.type,
                 serial_number = device.serial,
                 hw_version = str(device.version) if device.version is not None else None,
-                via_device = (DOMAIN, device.gateway_id) if device.gateway_id is not None else None,
+                via_device_id = device_entry_ids.get(device.gateway_id) if device.gateway_id is not None else None,
             )
             valid_ids.append( (DOMAIN, device.id) )
+            device_entry_ids[device.id] = device_entry.id
 
         # Remember valid device ids so we can do a cleanup of invalid ones later
         self._valid_device_ids = valid_ids
